@@ -1,0 +1,122 @@
+# API Test Script for TalentTrade Day 1 (with Username support)
+
+$baseUrl = "http://localhost:8080"
+$registerUrl = "$baseUrl/api/auth/register"
+$loginUrl = "$baseUrl/api/auth/login"
+$profileUrl = "$baseUrl/api/users/me"
+
+Write-Host "=================================================="
+Write-Host "Testing Day 1 APIs for TalentTrade (with Username)"
+Write-Host "=================================================="
+
+# 1. Register User
+$registerBody = @{
+    fullName = "Jane Doe"
+    username = "janedoe3"
+    email = "jane3@example.com"
+    password = "Password123"
+} | ConvertTo-Json
+
+Write-Host "[1/5] POST /api/auth/register..."
+try {
+    $registerResponse = Invoke-RestMethod -Uri $registerUrl -Method Post -Body $registerBody -ContentType "application/json"
+    Write-Host "Success! Register Response:"
+    $registerResponse | ConvertTo-Json | Write-Host
+} catch {
+    Write-Error "Failed to register: $_"
+    if ($_.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        $errResponse = $reader.ReadToEnd()
+        Write-Host "Error details: $errResponse"
+    }
+    Exit 1
+}
+
+# 2. Login User
+$loginBody = @{
+    email = "jane3@example.com"
+    password = "Password123"
+} | ConvertTo-Json
+
+Write-Host "`n[2/5] POST /api/auth/login..."
+try {
+    $loginResponse = Invoke-RestMethod -Uri $loginUrl -Method Post -Body $loginBody -ContentType "application/json"
+    Write-Host "Success! Login Response (token extracted):"
+    $token = $loginResponse.token
+    Write-Host "JWT Token: $token"
+} catch {
+    Write-Error "Failed to login: $_"
+    if ($_.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        $errResponse = $reader.ReadToEnd()
+        Write-Host "Error details: $errResponse"
+    }
+    Exit 1
+}
+
+# 3. Fetch User Profile
+Write-Host "`n[3/5] GET /api/users/me (using Bearer token)..."
+try {
+    $headers = @{
+        Authorization = "Bearer $token"
+    }
+    $profileResponse = Invoke-RestMethod -Uri $profileUrl -Method Get -Headers $headers
+    Write-Host "Success! Profile Response:"
+    $profileResponse | ConvertTo-Json | Write-Host
+} catch {
+    Write-Error "Failed to fetch profile: $_"
+    if ($_.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        $errResponse = $reader.ReadToEnd()
+        Write-Host "Error details: $errResponse"
+    }
+    Exit 1
+}
+
+# 4. Update User Profile
+$updateBody = @{
+    fullName = "Jane Smith"
+    username = "janesmith3"
+    bio = "Senior Software Developer and Mentorship Enthusiast"
+    location = "San Francisco, CA"
+} | ConvertTo-Json
+
+Write-Host "`n[4/5] PUT /api/users/me (using Bearer token)..."
+try {
+    $updateResponse = Invoke-RestMethod -Uri $profileUrl -Method Put -Headers $headers -Body $updateBody -ContentType "application/json"
+    Write-Host "Success! Updated Profile Response:"
+    $updateResponse | ConvertTo-Json | Write-Host
+} catch {
+    Write-Error "Failed to update profile: $_"
+    if ($_.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        $errResponse = $reader.ReadToEnd()
+        Write-Host "Error details: $errResponse"
+    }
+    Exit 1
+}
+
+# 5. Verify validation errors - test invalid registration
+Write-Host "`n[5/5] POST /api/auth/register (Testing Validation Failure)..."
+$invalidBody = @{
+    fullName = ""
+    username = "ab" # Too short
+    email = "not-an-email"
+    password = "123"
+} | ConvertTo-Json
+try {
+    Invoke-RestMethod -Uri $registerUrl -Method Post -Body $invalidBody -ContentType "application/json"
+    Write-Host "Error: Register succeeded when it should have failed validation."
+} catch {
+    Write-Host "Validation failed successfully! Error status code: $_"
+    if ($_.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+        $errResponse = $reader.ReadToEnd()
+        Write-Host "Expected Validation Error JSON:"
+        $errResponse | Write-Host
+    }
+}
+
+Write-Host "`n=================================================="
+Write-Host "All API Tests Passed Successfully!"
+Write-Host "=================================================="

@@ -1,0 +1,500 @@
+# Day 2 Walkthrough – Skills Management, Matching Engine & Exchange Requests
+
+We have implemented the complete Day 2 requirements for the TalentTrade platform.
+
+## 1. Database Design
+
+Four new database tables have been designed to persist Day 2 data, matching the entity structures:
+
+```sql
+-- 1. skills Table
+CREATE TABLE skills (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    category VARCHAR(255) NOT NULL,
+    description VARCHAR(1000)
+);
+
+-- 2. user_skills Table
+CREATE TABLE user_skills (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id),
+    skill_id BIGINT NOT NULL REFERENCES skills(id),
+    type VARCHAR(50) NOT NULL, -- 'TEACH' or 'LEARN'
+    level VARCHAR(50) NOT NULL, -- 'BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'
+    CONSTRAINT uq_user_skill_type UNIQUE (user_id, skill_id, type)
+);
+
+-- 3. matches Table
+CREATE TABLE matches (
+    id BIGSERIAL PRIMARY KEY,
+    user1_id BIGINT NOT NULL REFERENCES users(id),
+    user2_id BIGINT NOT NULL REFERENCES users(id),
+    match_score INT NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
+-- 4. exchange_requests Table
+CREATE TABLE exchange_requests (
+    id BIGSERIAL PRIMARY KEY,
+    sender_id BIGINT NOT NULL REFERENCES users(id),
+    receiver_id BIGINT NOT NULL REFERENCES users(id),
+    message VARCHAR(1000),
+    status VARCHAR(50) NOT NULL, -- 'PENDING', 'ACCEPTED', 'REJECTED', 'COMPLETED'
+    created_at TIMESTAMP NOT NULL
+);
+```
+
+---
+
+## 2. Entity Classes
+
+The corresponding JPA entity classes have been created:
+* [Skill.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/Skill.java) - Holds skill name, category, and description.
+* [UserSkill.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/UserSkill.java) - Maps users to their teach/learn skills with level.
+* [Match.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/Match.java) - Stores computed match records.
+* [ExchangeRequest.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/ExchangeRequest.java) - Models the exchange request flow.
+
+---
+
+## 3. Enums
+
+The enums representing entity fields:
+* [SkillType.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/SkillType.java) - `TEACH`, `LEARN`.
+* [SkillLevel.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/SkillLevel.java) - `BEGINNER`, `INTERMEDIATE`, `ADVANCED`, `EXPERT`.
+* [RequestStatus.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/RequestStatus.java) - `PENDING`, `ACCEPTED`, `REJECTED`, `COMPLETED`.
+
+---
+
+## 4. Repository Layer
+
+Spring Data JPA repositories are located under `/src/main/java/com/talenttrade/repository/`:
+* [SkillRepository.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/repository/SkillRepository.java)
+* [UserSkillRepository.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/repository/UserSkillRepository.java)
+* [MatchRepository.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/repository/MatchRepository.java)
+* [ExchangeRequestRepository.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/repository/ExchangeRequestRepository.java)
+
+---
+
+## 5. DTO Layer
+
+DTO models for request/response serialization are located under `/src/main/java/com/talenttrade/dto/`:
+* [SkillDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/SkillDTO.java)
+* [SkillResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/SkillResponseDTO.java)
+* [UserSkillRequestDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/UserSkillRequestDTO.java)
+* [UserSkillResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/UserSkillResponseDTO.java)
+* [UserSkillSearchResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/UserSkillSearchResponseDTO.java)
+* [MatchResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/MatchResponseDTO.java)
+* [ExchangeRequestDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/ExchangeRequestDTO.java)
+* [ExchangeRequestResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/ExchangeRequestResponseDTO.java)
+
+---
+
+## 6. Service Layer
+
+The service classes implementing logic:
+* [SkillService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/SkillService.java) - Handles Skill CRUD.
+* [UserSkillService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/UserSkillService.java) - Handles user-skills assignment and search.
+* [MatchService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/MatchService.java) - Custom rule-based matching engine.
+* [ExchangeRequestService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/ExchangeRequestService.java) - Manages exchange requests (accept/reject/view).
+
+---
+
+## 7. Controller Layer
+
+The controller classes mapping requests to REST APIs:
+* [SkillController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/SkillController.java)
+* [UserSkillController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/UserSkillController.java)
+* [UserController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/UserController.java) (Updated to include `/search`)
+* [MatchController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/MatchController.java)
+* [ExchangeRequestController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/ExchangeRequestController.java)
+
+---
+
+## 8. Validation Rules
+
+We have enforced input validations at controller levels:
+* **Skill Creation**: Non-empty skill `name` and `category`. Unique skill names.
+* **User Skills**: Valid enum values for `type` and `level`. Prevent duplicate assignments of the same skill with the same type for a user.
+* **Exchange Requests**: Message required. Cannot send requests to self. Cannot send duplicate pending requests.
+
+---
+
+## 9. Exception Handling
+
+Four new custom exceptions have been created and mapped to appropriate HTTP statuses in the modified [GlobalExceptionHandler.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/exception/GlobalExceptionHandler.java):
+* `SkillAlreadyExistsException` (409 Conflict)
+* `MatchNotFoundException` (404 Not Found)
+* `RequestAlreadyExistsException` (409 Conflict)
+* `InvalidRequestException` (400 Bad Request)
+
+---
+
+## 10. Swagger Documentation
+
+All new endpoints are fully documented with Swagger tags, operation descriptions, and security configurations.
+Access the interactive API docs at:
+`http://localhost:8080/swagger-ui.html`
+
+---
+
+## 11. Sample API Requests
+
+### 11.1 Skill Creation
+`POST /api/skills`
+Headers: `Authorization: Bearer <JWT_TOKEN>`
+```json
+{
+  "name": "Spring Boot",
+  "category": "Software Engineering",
+  "description": "Enterprise Java framework"
+}
+```
+
+### 11.2 Skill Assignment
+`POST /api/users/skills`
+Headers: `Authorization: Bearer <JWT_TOKEN>`
+```json
+{
+  "skillId": 1,
+  "type": "TEACH",
+  "level": "EXPERT"
+}
+```
+
+### 11.3 Search Users
+`GET /api/users/search?skill=Spring&page=0&size=10`
+Headers: `Authorization: Bearer <JWT_TOKEN>`
+
+### 11.4 Exchange Request Creation
+`POST /api/requests`
+Headers: `Authorization: Bearer <JWT_TOKEN>`
+```json
+{
+  "receiverId": 2,
+  "message": "Hi, I'd love to learn Spring Boot from you in exchange for React!"
+}
+```
+
+---
+
+## 12. Sample API Responses
+
+### 12.1 Skill Creation Response
+```json
+{
+  "id": 1,
+  "name": "Spring Boot",
+  "category": "Software Engineering",
+  "description": "Enterprise Java framework"
+}
+```
+
+### 12.2 Skill Assignment Response
+```json
+{
+  "id": 1,
+  "user": {
+    "id": 1,
+    "fullName": "Alice Smith",
+    "username": "alice",
+    "email": "alice@example.com",
+    "bio": "Senior Backend Dev",
+    "location": "New York"
+  },
+  "skill": {
+    "id": 1,
+    "name": "Spring Boot",
+    "category": "Software Engineering",
+    "description": "Enterprise Java framework"
+  },
+  "type": "TEACH",
+  "level": "EXPERT"
+}
+```
+
+### 12.3 Match Retrieval Response (Reciprocal 100%)
+```json
+[
+  {
+    "id": 1,
+    "user1": {
+      "id": 1,
+      "fullName": "Alice Smith",
+      "username": "alice",
+      "email": "alice@example.com"
+    },
+    "user2": {
+      "id": 2,
+      "fullName": "Bob Jones",
+      "username": "bob",
+      "email": "bob@example.com"
+    },
+    "matchScore": 100,
+    "createdAt": "2026-06-24T22:54:00"
+  }
+]
+```
+
+### 12.4 Request Accept Response
+```json
+{
+  "id": 1,
+  "sender": {
+    "id": 1,
+    "fullName": "Alice Smith",
+    "email": "alice@example.com"
+  },
+  "receiver": {
+    "id": 2,
+    "fullName": "Bob Jones",
+    "email": "bob@example.com"
+  },
+  "message": "Hi, I'd love to learn Spring Boot from you in exchange for React!",
+  "status": "ACCEPTED",
+  "createdAt": "2026-06-24T22:54:10"
+}
+```
+
+---
+
+## 13. Detailed Postman Testing Steps
+
+This guide explains step-by-step how to test the Day 2 APIs in Postman.
+
+### STEP 1: Register and Log In Users
+We will create two users: **Alice** and **Bob**, and obtain their JWT tokens.
+
+#### 1.1 Register Alice
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/auth/register`
+* **Body Tab**: Select **raw**, set type to **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "fullName": "Alice Smith",
+    "username": "alice",
+    "email": "alice@example.com",
+    "password": "Password123"
+  }
+  ```
+* **Action**: Click **Send**.
+
+#### 1.2 Register Bob
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/auth/register`
+* **Body Tab**: Select **raw**, set type to **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "fullName": "Bob Jones",
+    "username": "bob",
+    "email": "bob@example.com",
+    "password": "Password123"
+  }
+  ```
+* **Action**: Click **Send**.
+
+#### 1.3 Log in as Alice (To get her token)
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/auth/login`
+* **Body Tab**: Select **raw**, set type to **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "email": "alice@example.com",
+    "password": "Password123"
+  }
+  ```
+* **Action**: Click **Send**.
+* **Save Token**: From the JSON response, copy the value of `"token"`. This is **Alice's Token**.
+
+#### 1.4 Log in as Bob (To get his token)
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/auth/login`
+* **Body Tab**: Select **raw**, set type to **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "email": "bob@example.com",
+    "password": "Password123"
+  }
+  ```
+* **Action**: Click **Send**.
+* **Save Token**: From the JSON response, copy the value of `"token"`. This is **Bob's Token**.
+
+---
+
+### HOW TO SET AUTHENTICATION HEADERS IN POSTMAN
+For all remaining steps, you must include the token of the user you are acting as:
+1. In Postman, open the request tab.
+2. Go to the **Auth** tab (below the URL bar).
+3. Under **Type**, select **Bearer Token**.
+4. In the **Token** field, paste the copied token.
+*(Alternatively, you can go to the **Headers** tab, add a key `Authorization`, and set the value to `Bearer <YOUR_TOKEN>`)*.
+
+---
+
+### STEP 2: Create Skills (Registry)
+We will register skills in the system database. Let's use **Alice's Token** to perform these actions (any logged-in user can create skills).
+
+#### 2.1 Register "Spring Boot"
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/skills`
+* **Auth**: Set Bearer Token to **Alice's Token**.
+* **Body Tab**: Select **raw** -> **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "name": "Spring Boot",
+    "category": "Software Development",
+    "description": "Java enterprise backend framework"
+  }
+  ```
+* **Action**: Click **Send**.
+* Note the returned `"id"` (typically `1`).
+
+#### 2.2 Register "React"
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/skills`
+* **Auth**: Set Bearer Token to **Alice's Token**.
+* **Body Tab**: Select **raw** -> **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "name": "React",
+    "category": "Frontend Development",
+    "description": "Component-based user interface library"
+  }
+  ```
+* **Action**: Click **Send**.
+* Note the returned `"id"` (typically `2`).
+
+---
+
+### STEP 3: Assign Skills to Users
+Now we associate the skills to our users as `TEACH` or `LEARN`.
+
+#### 3.1 Assign Alice to TEACH Spring Boot (ID 1)
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/users/skills`
+* **Auth**: Set Bearer Token to **Alice's Token**.
+* **Body Tab**: Select **raw** -> **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "skillId": 1,
+    "type": "TEACH",
+    "level": "EXPERT"
+  }
+  ```
+* **Action**: Click **Send**.
+
+#### 3.2 Assign Alice to LEARN React (ID 2)
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/users/skills`
+* **Auth**: Set Bearer Token to **Alice's Token**.
+* **Body Tab**: Select **raw** -> **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "skillId": 2,
+    "type": "LEARN",
+    "level": "BEGINNER"
+  }
+  ```
+* **Action**: Click **Send**.
+
+#### 3.3 Assign Bob to TEACH React (ID 2)
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/users/skills`
+* **Auth**: Set Bearer Token to **Bob's Token**.
+* **Body Tab**: Select **raw** -> **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "skillId": 2,
+    "type": "TEACH",
+    "level": "ADVANCED"
+  }
+  ```
+* **Action**: Click **Send**.
+
+#### 3.4 Assign Bob to LEARN Spring Boot (ID 1)
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/users/skills`
+* **Auth**: Set Bearer Token to **Bob's Token**.
+* **Body Tab**: Select **raw** -> **JSON**.
+* **Body Content**:
+  ```json
+  {
+    "skillId": 1,
+    "type": "LEARN",
+    "level": "INTERMEDIATE"
+  }
+  ```
+* **Action**: Click **Send**.
+
+---
+
+### STEP 4: Search Users by Skill
+Search for users who can teach "Spring".
+
+* **Method**: `GET`
+* **URL**: `http://localhost:8080/api/users/search?skill=Spring&page=0&size=10`
+* **Auth**: Set Bearer Token to **Bob's Token** (or Alice's).
+* **Action**: Click **Send**.
+* **Verification**: You should see a paginated response list containing Alice, since she is teaching Spring Boot.
+
+---
+
+### STEP 5: Matching Engine Recalculation
+Trigger the engine to scan UserSkills and find reciprocal matching opportunities.
+
+#### 5.1 Trigger Refresh
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/matches/refresh`
+* **Auth**: Set Bearer Token to **Alice's Token** (or Bob's).
+* **Action**: Click **Send**. (Expect a `200 OK` response status).
+
+#### 5.2 Fetch Matches for Alice
+* **Method**: `GET`
+* **URL**: `http://localhost:8080/api/matches`
+* **Auth**: Set Bearer Token to **Alice's Token**.
+* **Action**: Click **Send**.
+* **Verification**: You should see a list containing one match record between Alice and Bob with a score of `100` (perfect reciprocal match). Note the match `"id"` (typically `1`).
+
+---
+
+### STEP 6: Exchange Requests Flow
+Alice will send an exchange request to Bob, and Bob will accept it.
+
+#### 6.1 Alice sends a request to Bob
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/requests`
+* **Auth**: Set Bearer Token to **Alice's Token**.
+* **Body Tab**: Select **raw** -> **JSON**.
+* **Body Content** (Replace `receiverId` with Bob's user ID, which is typically `2`):
+  ```json
+  {
+    "receiverId": 2,
+    "message": "Hi Bob, I noticed we have a 100% skill match! I can teach you Spring Boot if you teach me React."
+  }
+  ```
+* **Action**: Click **Send**.
+* Note the exchange request `"id"` (typically `1`).
+
+#### 6.2 Bob views his received requests
+* **Method**: `GET`
+* **URL**: `http://localhost:8080/api/requests/received`
+* **Auth**: Set Bearer Token to **Bob's Token**.
+* **Action**: Click **Send**.
+* **Verification**: Bob should see the request sent by Alice in status `PENDING`.
+
+#### 6.3 Bob accepts the request
+* **Method**: `PUT`
+* **URL**: `http://localhost:8080/api/requests/1/accept`  *(Replace `1` with the request ID)*
+* **Auth**: Set Bearer Token to **Bob's Token**.
+* **Action**: Click **Send**.
+* **Verification**: The request status in the JSON response should now be `"status": "ACCEPTED"`.
+

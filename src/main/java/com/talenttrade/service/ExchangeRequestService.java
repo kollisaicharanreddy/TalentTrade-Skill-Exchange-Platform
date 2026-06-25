@@ -12,6 +12,7 @@ import com.talenttrade.exception.ResourceNotFoundException;
 import com.talenttrade.exception.UnauthorizedException;
 import com.talenttrade.repository.ExchangeRequestRepository;
 import com.talenttrade.repository.UserRepository;
+import com.talenttrade.entity.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class ExchangeRequestService {
 
     private final ExchangeRequestRepository exchangeRequestRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public ExchangeRequestResponseDTO createRequest(String senderEmail, ExchangeRequestDTO requestDTO) {
@@ -62,6 +64,13 @@ public class ExchangeRequestService {
         ExchangeRequest savedRequest = exchangeRequestRepository.save(request);
         log.info("Request sent successfully: ID={}, sender={}, receiver={}, status=PENDING", 
                 savedRequest.getId(), sender.getEmail(), receiver.getEmail());
+
+        notificationService.createNotification(
+                receiver,
+                "New Exchange Request",
+                "You received a skill exchange request from " + sender.getFullName(),
+                NotificationType.REQUEST_RECEIVED
+        );
 
         return mapToResponseDTO(savedRequest);
     }
@@ -111,6 +120,13 @@ public class ExchangeRequestService {
         ExchangeRequest updatedRequest = exchangeRequestRepository.save(request);
         log.info("Request accepted successfully: ID={}", requestId);
 
+        notificationService.createNotification(
+                request.getSender(),
+                "Exchange Request Accepted",
+                request.getReceiver().getFullName() + " accepted your skill exchange request.",
+                NotificationType.REQUEST_ACCEPTED
+        );
+
         return mapToResponseDTO(updatedRequest);
     }
 
@@ -134,6 +150,13 @@ public class ExchangeRequestService {
         request.setStatus(RequestStatus.REJECTED);
         ExchangeRequest updatedRequest = exchangeRequestRepository.save(request);
         log.info("Request rejected successfully: ID={}", requestId);
+
+        notificationService.createNotification(
+                request.getSender(),
+                "Exchange Request Rejected",
+                request.getReceiver().getFullName() + " rejected your skill exchange request.",
+                NotificationType.REQUEST_REJECTED
+        );
 
         return mapToResponseDTO(updatedRequest);
     }

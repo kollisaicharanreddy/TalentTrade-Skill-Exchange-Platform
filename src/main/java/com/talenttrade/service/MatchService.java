@@ -3,12 +3,10 @@ package com.talenttrade.service;
 import com.talenttrade.dto.MatchResponseDTO;
 import com.talenttrade.dto.UserResponse;
 import com.talenttrade.entity.Match;
-import com.talenttrade.entity.Skill;
 import com.talenttrade.entity.SkillType;
 import com.talenttrade.entity.User;
 import com.talenttrade.entity.UserSkill;
 import com.talenttrade.exception.MatchNotFoundException;
-import com.talenttrade.exception.ResourceNotFoundException;
 import com.talenttrade.exception.UnauthorizedException;
 import com.talenttrade.repository.MatchRepository;
 import com.talenttrade.repository.UserRepository;
@@ -80,7 +78,7 @@ public class MatchService {
         for (int i = 0; i < users.size(); i++) {
             User u1 = users.get(i);
             List<UserSkill> u1Skills = userSkillsMap.getOrDefault(u1, List.of());
-            
+
             Set<Long> u1TeachSkillIds = u1Skills.stream()
                     .filter(us -> us.getType() == SkillType.TEACH)
                     .map(us -> us.getSkill().getId())
@@ -149,7 +147,8 @@ public class MatchService {
                             .build();
 
                     newMatches.add(match);
-                    log.info("Match generated: user1_id={}, user2_id={}, score={}%", first.getId(), second.getId(), score);
+                    log.info("Match generated: user1_id={}, user2_id={}, score={}%", first.getId(), second.getId(),
+                            score);
                 }
             }
         }

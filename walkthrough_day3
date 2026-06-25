@@ -1,0 +1,368 @@
+# Day 3 Walkthrough – Session Management, Reviews, Dashboard & Notifications
+
+This walkthrough summarizes the database design, entity relationships, validation mechanisms, custom exceptions, API schemas, and testing steps implemented for Day 3.
+
+---
+
+## 1. Database Design
+
+Three new tables were added to persist Day 3 data. PostgreSQL schema mapping details:
+
+```sql
+-- 1. sessions Table
+CREATE TABLE sessions (
+    id BIGSERIAL PRIMARY KEY,
+    exchange_request_id BIGINT NOT NULL UNIQUE REFERENCES exchange_requests(id) ON DELETE CASCADE,
+    mentor_id BIGINT NOT NULL REFERENCES users(id),
+    learner_id BIGINT NOT NULL REFERENCES users(id),
+    scheduled_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    meeting_link VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL, -- 'SCHEDULED', 'COMPLETED', 'CANCELLED'
+    notes VARCHAR(1000),
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+-- 2. reviews Table
+CREATE TABLE reviews (
+    id BIGSERIAL PRIMARY KEY,
+    session_id BIGINT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    reviewer_id BIGINT NOT NULL REFERENCES users(id),
+    reviewee_id BIGINT NOT NULL REFERENCES users(id),
+    rating INT NOT NULL,
+    comment VARCHAR(1000),
+    created_at TIMESTAMP NOT NULL,
+    CONSTRAINT uq_session_reviewer UNIQUE (session_id, reviewer_id)
+);
+
+-- 3. notifications Table
+CREATE TABLE notifications (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    message VARCHAR(1000) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- 'REQUEST_RECEIVED', 'REQUEST_ACCEPTED', etc.
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL
+);
+```
+
+---
+
+## 2. Entity Classes
+
+We mapped the SQL design into the following JPA classes:
+* [Session.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/Session.java) - Holds scheduled session data, mentor/learner relationships, times, status, and auditing timestamps.
+* [Review.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/Review.java) - Maps review text and rating to a completed session.
+* [Notification.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/Notification.java) - Handles DB-backed notifications for in-app messaging.
+
+---
+
+## 3. Enums
+
+Two new enums model states and event types:
+* [SessionStatus.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/SessionStatus.java) - `SCHEDULED`, `COMPLETED`, `CANCELLED`.
+* [NotificationType.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/NotificationType.java) - `REQUEST_RECEIVED`, `REQUEST_ACCEPTED`, `REQUEST_REJECTED`, `SESSION_CREATED`, `SESSION_CANCELLED`, `REVIEW_RECEIVED`.
+
+---
+
+## 4. Repository Layer
+
+Spring Data Repositories manage database access:
+* [SessionRepository.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/repository/SessionRepository.java) - Includes pagination queries, conflict overlap checking queries (`hasTimeConflict`/`hasTimeConflictExcludingSession`), and dashboard count aggregations.
+* [ReviewRepository.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/repository/ReviewRepository.java) - Contains methods to check for duplicate reviews and query user average ratings (`getAverageRatingForUser`).
+* [NotificationRepository.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/repository/NotificationRepository.java) - Supports listing notifications paginated and marking all as read.
+
+---
+
+## 5. DTO Layer
+
+DTOs enforce request schemas and control data serialized in responses:
+* [SessionRequestDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/SessionRequestDTO.java)
+* [SessionResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/SessionResponseDTO.java)
+* [ReviewRequestDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/ReviewRequestDTO.java)
+* [ReviewResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/ReviewResponseDTO.java)
+* [DashboardResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/DashboardResponseDTO.java)
+* [NotificationResponseDTO.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/dto/NotificationResponseDTO.java)
+
+---
+
+## 6. Service Layer
+
+The services coordinate state transitions, validation, and notification generation:
+* [SessionService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/SessionService.java) - Validates scheduling conflicts, enforces accepted status checks, completes/cancels sessions, and fires notifications.
+* [ReviewService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/ReviewService.java) - Enforces rating constraints, completed session status checks, auto-infers reviewee based on reviewer identity, and fires reviews notifications.
+* [DashboardService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/DashboardService.java) - Computes all 11 user metrics (ratings are rounded to 1 decimal place).
+* [NotificationService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/NotificationService.java) - Handles notification delivery, read updates, and deletion.
+
+---
+
+## 7. Controller Layer
+
+REST APIs are protected by Spring Security (JWT) and mapped under standard routes:
+* [SessionController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/SessionController.java) - `/api/sessions` mapping scheduling, completion, cancellation, and history queries.
+* [ReviewController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/ReviewController.java) - `/api/reviews` mapping review submission and lookups.
+* [DashboardController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/DashboardController.java) - `/api/dashboard` mapping the personalized stats dashboard.
+* [NotificationController.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/NotificationController.java) - `/api/notifications` mapping notification list reads, read-all, and deletions.
+
+---
+
+## 8. Business Rules
+
+The following key policies are strictly enforced at the database and service levels:
+* **Session Creation**: Permitted only if the linked `ExchangeRequest` status is `ACCEPTED`.
+* **Session Modification/Cancellation**: Restrained solely to session participants. Only `SCHEDULED` sessions can be modified or cancelled.
+* **Review Submission**: Allowed only after the session has been marked as `COMPLETED`.
+* **Unique Review Constraint**: Limited to one review per reviewer per session. Self-reviews are explicitly rejected.
+* **Automatic Notifications**: Generated upon exchange request events, session scheduling/cancellation, and review delivery.
+
+---
+
+## 9. Validation
+
+Input attributes are validated utilizing standard annotations:
+* Date must be in the future (on or after today).
+* End time must be strictly after start time.
+* Ratings must reside strictly in the `[1, 5]` range (enforced using `@Min(1)` and `@Max(5)`).
+* Overlapping schedule conflict checks prevent users from scheduling sessions if they have an active session in a conflicting time range.
+
+---
+
+## 10. Exception Handling
+
+Four new custom exceptions have been declared and handled in the updated [GlobalExceptionHandler.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/exception/GlobalExceptionHandler.java):
+* `SessionNotFoundException` (404 Not Found)
+* `InvalidSessionStateException` (400 Bad Request)
+* `ReviewAlreadyExistsException` (409 Conflict)
+* `NotificationNotFoundException` (404 Not Found)
+
+---
+
+## 11. Swagger Documentation
+
+All new endpoints are annotated with `@Tag` and `@Operation` to describe their parameters, validation expectations, and roles. The updated schemas are visible dynamically at:
+`http://localhost:8080/swagger-ui.html`
+
+---
+
+## 12. Sample API Requests
+
+### 12.1 Schedule Session
+`POST /api/sessions`
+Headers: `Authorization: Bearer <SENDER_JWT_TOKEN>`
+```json
+{
+  "exchangeRequestId": 1,
+  "mentorId": 1,
+  "learnerId": 2,
+  "scheduledDate": "2026-07-01",
+  "startTime": "14:00:00",
+  "endTime": "15:30:00",
+  "meetingLink": "https://meet.google.com/abc-defg-hij",
+  "notes": "Let's learn Spring Boot foundations!"
+}
+```
+
+### 12.2 Leave Review
+`POST /api/reviews`
+Headers: `Authorization: Bearer <LEARNER_JWT_TOKEN>`
+```json
+{
+  "sessionId": 1,
+  "rating": 5,
+  "comment": "Alice is an outstanding mentor. Highly recommended!"
+}
+```
+
+---
+
+## 13. Sample API Responses
+
+### 13.1 Schedule Session Response
+```json
+{
+  "id": 1,
+  "exchangeRequestId": 1,
+  "mentor": {
+    "id": 1,
+    "fullName": "Alice Smith",
+    "username": "alice",
+    "email": "alice@example.com",
+    "bio": "Senior Backend Dev",
+    "location": "New York"
+  },
+  "learner": {
+    "id": 2,
+    "fullName": "Bob Jones",
+    "username": "bob",
+    "email": "bob@example.com",
+    "bio": "Frontend Dev",
+    "location": "Boston"
+  },
+  "scheduledDate": "2026-07-01",
+  "startTime": "14:00:00",
+  "endTime": "15:30:00",
+  "meetingLink": "https://meet.google.com/abc-defg-hij",
+  "status": "SCHEDULED",
+  "notes": "Let's learn Spring Boot foundations!",
+  "createdAt": "2026-06-25T23:25:00",
+  "updatedAt": "2026-06-25T23:25:00"
+}
+```
+
+### 13.2 Dashboard Response
+`GET /api/dashboard`
+```json
+{
+  "skillsOffered": 1,
+  "skillsWanted": 1,
+  "matches": 1,
+  "requestsSent": 1,
+  "requestsReceived": 0,
+  "acceptedRequests": 1,
+  "rejectedRequests": 0,
+  "upcomingSessions": 0,
+  "completedSessions": 1,
+  "averageRating": 5.0,
+  "totalReviews": 1
+}
+```
+
+### 13.3 Notifications List Response
+`GET /api/notifications`
+```json
+{
+  "content": [
+    {
+      "id": 3,
+      "userId": 1,
+      "title": "New Review Received",
+      "message": "Bob Jones left you a 5-star review for your session on 2026-07-01",
+      "type": "REVIEW_RECEIVED",
+      "isRead": false,
+      "createdAt": "2026-06-25T23:30:00"
+    }
+  ],
+  "pageable": {
+    "pageNumber": 0,
+    "pageSize": 10
+  },
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+---
+
+## 14. Detailed Postman Testing Steps
+
+Use these instructions to verify the entire Day 3 workflow:
+
+### SETUP
+Make sure Alice and Bob are registered, their skills mapped, Alice's exchange request to Bob has been accepted, and both JWT tokens are collected (refer to Day 2 Walkthrough for registration details).
+
+---
+
+### STEP 1: Schedule a Session
+Alice will schedule a session with Bob for exchange request ID `1` (which she accepted).
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/sessions`
+* **Auth**: Bearer Token -> **Alice's Token**
+* **Body (JSON)**:
+  ```json
+  {
+    "exchangeRequestId": 1,
+    "mentorId": 1,
+    "learnerId": 2,
+    "scheduledDate": "2026-07-01",
+    "startTime": "14:00:00",
+    "endTime": "15:30:00",
+    "meetingLink": "https://meet.google.com/abc-defg-hij",
+    "notes": "Discussing Spring Boot JPA mappings"
+  }
+  ```
+* **Action**: Click **Send**.
+* **Verify**: Status code `201 Created`. Copy the returned `"id"` (typically `1`).
+
+---
+
+### STEP 2: Verify Notifications (Session Scheduled)
+Verify that both Alice and Bob received the schedule notification.
+* **Method**: `GET`
+* **URL**: `http://localhost:8080/api/notifications`
+* **Auth**: Bearer Token -> **Bob's Token** (Then repeat with **Alice's Token**)
+* **Action**: Click **Send**.
+* **Verify**: Status code `200 OK`. You should see the `SESSION_CREATED` notification. Note the notification `"id"`.
+
+---
+
+### STEP 3: Check Conflict Prevention (Validation)
+Attempt to schedule another session for Alice on the same date and overlapping time to verify conflict checks.
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/sessions`
+* **Auth**: Bearer Token -> **Alice's Token**
+* **Body (JSON)**:
+  ```json
+  {
+    "exchangeRequestId": 1,
+    "mentorId": 1,
+    "learnerId": 2,
+    "scheduledDate": "2026-07-01",
+    "startTime": "14:30:00",
+    "endTime": "16:00:00",
+    "meetingLink": "https://meet.google.com/conflict",
+    "notes": "Overlapping session"
+  }
+  ```
+* **Action**: Click **Send**.
+* **Verify**: Status code `400 Bad Request` with message `"Mentor has a scheduling conflict at this date and time"`.
+
+---
+
+### STEP 4: Complete the Session
+Alice marks the session as completed once it is done.
+* **Method**: `PUT`
+* **URL**: `http://localhost:8080/api/sessions/1/complete` *(Replace 1 with session ID)*
+* **Auth**: Bearer Token -> **Alice's Token**
+* **Action**: Click **Send**.
+* **Verify**: Status code `200 OK`. The returned JSON should show `"status": "COMPLETED"`.
+
+---
+
+### STEP 5: Submit a Review
+Bob submits a review rating Alice's mentoring.
+* **Method**: `POST`
+* **URL**: `http://localhost:8080/api/reviews`
+* **Auth**: Bearer Token -> **Bob's Token**
+* **Body (JSON)**:
+  ```json
+  {
+    "sessionId": 1,
+    "rating": 5,
+    "comment": "Alice explained complex Hibernate entities beautifully!"
+  }
+  ```
+* **Action**: Click **Send**.
+* **Verify**: Status code `201 Created`.
+
+---
+
+### STEP 6: Check Dashboard Statistics
+Verify Alice's dashboard stats reflect the completed session and Bob's rating.
+* **Method**: `GET`
+* **URL**: `http://localhost:8080/api/dashboard`
+* **Auth**: Bearer Token -> **Alice's Token**
+* **Action**: Click **Send**.
+* **Verify**: Status code `200 OK`. The response should display `"completedSessions": 1`, `"averageRating": 5.0`, and `"totalReviews": 1`.
+
+---
+
+### STEP 7: Read Notification
+Bob marks his notification as read.
+* **Method**: `PUT`
+* **URL**: `http://localhost:8080/api/notifications/1/read` *(Replace 1 with Bob's notification ID)*
+* **Auth**: Bearer Token -> **Bob's Token**
+* **Action**: Click **Send**.
+* **Verify**: Status code `200 OK`.

@@ -1,5 +1,6 @@
 package com.talenttrade.controller;
 
+import com.talenttrade.dto.ApiResponse;
 import com.talenttrade.dto.LoginRequest;
 import com.talenttrade.dto.LoginResponse;
 import com.talenttrade.dto.RegisterRequest;
@@ -26,15 +27,15 @@ public class AuthController {
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user", description = "Creates a new user profile with encrypted password and checks for email uniqueness.")
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
         UserResponse response = authService.register(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return new ResponseEntity<>(ApiResponse.success(response, "User registered successfully"), HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
     @Operation(summary = "Log in a user", description = "Authenticates user credentials and returns a JWT Bearer token along with user details.")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
     }
 }

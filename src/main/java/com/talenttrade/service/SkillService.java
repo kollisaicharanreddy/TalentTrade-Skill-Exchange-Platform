@@ -8,11 +8,10 @@ import com.talenttrade.exception.SkillAlreadyExistsException;
 import com.talenttrade.repository.SkillRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,11 +41,10 @@ public class SkillService {
     }
 
     @Transactional(readOnly = true)
-    public List<SkillResponseDTO> getAllSkills() {
-        log.debug("Fetching all skills");
-        return skillRepository.findAll().stream()
-                .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+    public Page<SkillResponseDTO> getAllSkills(Pageable pageable) {
+        log.debug("Fetching all skills with pagination");
+        return skillRepository.findAll(pageable)
+                .map(this::mapToResponseDTO);
     }
 
     @Transactional(readOnly = true)

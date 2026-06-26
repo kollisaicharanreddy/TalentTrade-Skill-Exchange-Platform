@@ -15,12 +15,13 @@ import com.talenttrade.repository.UserRepository;
 import com.talenttrade.entity.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,11 +47,14 @@ public class ExchangeRequestService {
             throw new InvalidRequestException("Cannot send exchange request to yourself");
         }
 
-        // Prevent duplicate pending requests
-        boolean pendingExists = exchangeRequestRepository.existsBySenderAndReceiverAndStatus(sender, receiver, RequestStatus.PENDING);
-        if (pendingExists) {
-            log.warn("Exchange request creation failed - pending request already exists from {} to {}", sender.getId(), receiver.getId());
-            throw new RequestAlreadyExistsException("A pending exchange request already exists between you and this user");
+        // Prevent duplicate pending or accepted requests in either direction
+        List<RequestStatus> activeStatuses = List.of(RequestStatus.PENDING, RequestStatus.ACCEPTED);
+        boolean requestExists = exchangeRequestRepository.existsBySenderAndReceiverAndStatusIn(sender, receiver, activeStatuses)
+                || exchangeRequestRepository.existsBySenderAndReceiverAndStatusIn(receiver, sender, activeStatuses);
+        
+        if (requestExists) {
+            log.warn("Exchange request creation failed - active request already exists between {} and {}", sender.getId(), receiver.getId());
+            throw new RequestAlreadyExistsException("A pending or accepted exchange request already exists between you and this user");
         }
 
         ExchangeRequest request = ExchangeRequest.builder()
@@ -76,27 +80,24 @@ public class ExchangeRequestService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExchangeRequestResponseDTO> getAllRequests(String email) {
+    public Page<ExchangeRequestResponseDTO> getAllRequests(String email, Pageable pageable) {
         log.debug("Fetching all requests involving user: {}", email);
-        return exchangeRequestRepository.findBySenderEmailOrReceiverEmail(email, email).stream()
-                .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+        return exchangeRequestRepository.findBySenderEmailOrReceiverEmail(email, email, pageable)
+                .map(this::mapToResponseDTO);
     }
 
     @Transactional(readOnly = true)
-    public List<ExchangeRequestResponseDTO> getSentRequests(String email) {
+    public Page<ExchangeRequestResponseDTO> getSentRequests(String email, Pageable pageable) {
         log.debug("Fetching sent requests for user: {}", email);
-        return exchangeRequestRepository.findBySenderEmail(email).stream()
-                .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+        return exchangeRequestRepository.findBySenderEmail(email, pageable)
+                .map(this::mapToResponseDTO);
     }
 
     @Transactional(readOnly = true)
-    public List<ExchangeRequestResponseDTO> getReceivedRequests(String email) {
+    public Page<ExchangeRequestResponseDTO> getReceivedRequests(String email, Pageable pageable) {
         log.debug("Fetching received requests for user: {}", email);
-        return exchangeRequestRepository.findByReceiverEmail(email).stream()
-                .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+        return exchangeRequestRepository.findByReceiverEmail(email, pageable)
+                .map(this::mapToResponseDTO);
     }
 
     @Transactional

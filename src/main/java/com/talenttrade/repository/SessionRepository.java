@@ -2,6 +2,7 @@ package com.talenttrade.repository;
 
 import com.talenttrade.entity.Session;
 import com.talenttrade.entity.SessionStatus;
+import com.talenttrade.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -41,4 +42,6 @@ public interface SessionRepository extends JpaRepository<Session, Long> {
 
     @Query("SELECT COUNT(s) FROM Session s WHERE (s.mentor.email = :email OR s.learner.email = :email) AND s.status = :status")
     long countByUserAndStatus(@Param("email") String email, @Param("status") SessionStatus status);
+
+    boolean existsByMentorAndLearnerAndStatus(User mentor, User learner, SessionStatus status);
 }

@@ -1,5 +1,6 @@
 package com.talenttrade.controller;
 
+import com.talenttrade.dto.ApiResponse;
 import com.talenttrade.dto.DashboardResponseDTO;
 import com.talenttrade.service.DashboardService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,9 +24,9 @@ public class DashboardController {
 
     @GetMapping
     @Operation(summary = "Get user dashboard statistics", description = "Fetches comprehensive metrics for the authenticated user, including total skills, matches, request counts, session counts, and average rating.")
-    public ResponseEntity<DashboardResponseDTO> getDashboard(Authentication authentication) {
+    public ResponseEntity<ApiResponse<DashboardResponseDTO>> getDashboard(Authentication authentication) {
         String email = authentication.getName();
         DashboardResponseDTO response = dashboardService.generateDashboard(email);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "Dashboard statistics retrieved successfully"));
     }
 }

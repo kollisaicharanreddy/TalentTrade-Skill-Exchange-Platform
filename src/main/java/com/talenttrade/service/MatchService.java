@@ -13,6 +13,8 @@ import com.talenttrade.repository.UserRepository;
 import com.talenttrade.repository.UserSkillRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,11 +35,10 @@ public class MatchService {
     private final UserSkillRepository userSkillRepository;
 
     @Transactional(readOnly = true)
-    public List<MatchResponseDTO> getMatchesForUser(String email) {
-        log.info("Fetching matches for user: {}", email);
-        return matchRepository.findByUser1EmailOrUser2Email(email, email).stream()
-                .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+    public Page<MatchResponseDTO> getMatchesForUser(String email, Pageable pageable) {
+        log.info("Fetching matches for user: {} with pagination", email);
+        return matchRepository.findByUser1EmailOrUser2Email(email, email, pageable)
+                .map(this::mapToResponseDTO);
     }
 
     @Transactional(readOnly = true)

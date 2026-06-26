@@ -1,8 +1,6 @@
 # TalentTrade - Skill Exchange Platform Backend
 
-TalentTrade is a peer-to-peer skill exchange platform that enables users to teach skills they possess and learn skills they want from other users through mutual skill exchanges rather than monetary transactions.
-
-This repository hosts the production-ready Spring Boot backend for the platform.
+TalentTrade is a production-ready, peer-to-peer skill exchange platform backend built on Spring Boot. It empowers users to trade skills they possess (TEACH) for skills they want to acquire (LEARN) through a non-monetary matching engine, exchange requests, virtual scheduling, session feedback, in-app notifications, and secure real-time messaging using WebSockets.
 
 ---
 
@@ -13,8 +11,10 @@ This repository hosts the production-ready Spring Boot backend for the platform.
 - **Object-Relational Mapping**: Spring Data JPA & Hibernate
 - **Security**: Spring Security & JWT (JSON Web Tokens)
 - **JSON Parser/Signing**: JJWT (`0.11.5`)
-- **Documentation**: OpenAPI Spec / Swagger UI
+- **Real-Time Communication**: Spring WebSocket, STOMP Broker, SockJS
+- **Documentation**: OpenAPI Spec / Swagger UI (`springdoc-openapi`)
 - **Build Tool**: Maven
+- **Lombok**: Metadata generation & clean boilerplate reduction
 
 ---
 
@@ -22,91 +22,216 @@ This repository hosts the production-ready Spring Boot backend for the platform.
 
 ```text
 com.talenttrade
-├── config          # Global configurations (e.g., Swagger)
-├── security        # JWT Services, security configurations, and filters
-├── controller      # REST Controllers (Auth, Users)
+├── config          # Global configurations (Swagger, WebSockets)
+├── controller      # REST Controllers & WebSocket Message Handlers
 ├── service         # Business logic layer
 ├── repository      # Database persistence interfaces
-├── entity          # JPA Entities (User)
-├── dto             # Request and Response Data Transfer Objects
-├── exception       # Custom exceptions and Global Exception Handler
-└── TalentTradeApplication.java # Spring Boot Main Class
+├── entity          # JPA Entities (User, Skill, UserSkill, Match, ExchangeRequest, Session, Review, Notification, ChatMessage)
+├── dto             # Request and Response Data Transfer Objects (including standardized ApiResponse wrapper)
+├── security        # JWT Services, security configurations, and filters
+└── exception       # Custom exceptions and Global Exception Handler
 ```
 
 ---
 
-## ⚙️ Prerequisites
+## 🗄️ Database Schema
 
-- **Java Development Kit (JDK)**: Version 21 (Temurin JDK 21+ recommended)
-- **Apache Maven**: Version 3.9+
-- **PostgreSQL**: Running instance on port `5432`
+The backend uses PostgreSQL with automatic Hibernate DDL update. The logical schema is structured as follows:
+
+```sql
+-- 1. users Table
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    bio VARCHAR(1000),
+    location VARCHAR(255),
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+-- 2. skills Table
+CREATE TABLE skills (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    category VARCHAR(255) NOT NULL,
+    description VARCHAR(1000)
+);
+
+-- 3. user_skills Table
+CREATE TABLE user_skills (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    skill_id BIGINT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+    type VARCHAR(50) NOT NULL, -- 'TEACH', 'LEARN'
+    level VARCHAR(50) NOT NULL, -- 'BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'
+    CONSTRAINT uq_user_skill_type UNIQUE (user_id, skill_id, type)
+);
+
+-- 4. matches Table
+CREATE TABLE matches (
+    id BIGSERIAL PRIMARY KEY,
+    user1_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user2_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    match_score INT NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    CONSTRAINT uq_match_pair UNIQUE (user1_id, user2_id)
+);
+
+-- 5. exchange_requests Table
+CREATE TABLE exchange_requests (
+    id BIGSERIAL PRIMARY KEY,
+    sender_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message VARCHAR(1000),
+    status VARCHAR(50) NOT NULL, -- 'PENDING', 'ACCEPTED', 'REJECTED'
+    created_at TIMESTAMP NOT NULL
+);
+
+-- 6. sessions Table
+CREATE TABLE sessions (
+    id BIGSERIAL PRIMARY KEY,
+    exchange_request_id BIGINT NOT NULL UNIQUE REFERENCES exchange_requests(id) ON DELETE CASCADE,
+    mentor_id BIGINT NOT NULL REFERENCES users(id),
+    learner_id BIGINT NOT NULL REFERENCES users(id),
+    scheduled_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    meeting_link VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL, -- 'SCHEDULED', 'COMPLETED', 'CANCELLED'
+    notes VARCHAR(1000),
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL
+);
+
+-- 7. reviews Table
+CREATE TABLE reviews (
+    id BIGSERIAL PRIMARY KEY,
+    session_id BIGINT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    reviewer_id BIGINT NOT NULL REFERENCES users(id),
+    reviewee_id BIGINT NOT NULL REFERENCES users(id),
+    rating INT NOT NULL,
+    comment VARCHAR(1000),
+    created_at TIMESTAMP NOT NULL,
+    CONSTRAINT uq_session_reviewer UNIQUE (session_id, reviewer_id)
+);
+
+-- 8. notifications Table
+CREATE TABLE notifications (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    message VARCHAR(1000) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- 'REQUEST_RECEIVED', 'REQUEST_ACCEPTED', etc.
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL
+);
+
+-- 9. chat_messages Table
+CREATE TABLE chat_messages (
+    id BIGSERIAL PRIMARY KEY,
+    sender_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    receiver_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message VARCHAR(2000) NOT NULL,
+    sent_at TIMESTAMP NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE
+);
+```
 
 ---
 
-## 🚀 Getting Started
+## ✨ Features
 
-### 1. Database Setup
-Ensure PostgreSQL is running, then log in and create the database:
+### 1. Security & Authentication
+- **Secure Auth**: Custom user registration and login endpoints utilizing **Spring Security** and stateless **JWT Tokens**.
+- **Role Control**: Endpoints secured under `ROLE_USER` hierarchy using filter interceptors.
+
+### 2. Skill Management
+- **Universal Skill Registry**: Directory containing categorized skills (e.g., Programming, Language, Design).
+- **User Profile Association**: Users attach skills they wish to teach or learn, along with levels (`BEGINNER` to `EXPERT`).
+
+### 3. Mutual Matching Engine
+- **Reciprocal Matches**: Finds users who teach what you want to learn, and learn what you teach.
+- **Score Calculation**: Automatically calculates matching scores and creates match profiles.
+
+### 4. Exchange Requests
+- **Structured Handshakes**: Users dispatch requests to match candidates. Duplicates are strictly prevented.
+- **State Flow**: Requests transition from `PENDING` to `ACCEPTED` or `REJECTED`.
+
+### 5. Session Scheduler
+- **Meeting Organization**: Accepted requests can generate unique training sessions.
+- **Overlap Conflict Checks**: Interceptor logic checks user calendar constraints to prevent conflicting session overlaps.
+
+### 6. Ratings & Feedback
+- **Quality Control**: Completed sessions can be reviewed and rated (1-5 stars).
+- **Security Check**: Self-reviews and duplicate reviews are strictly barred.
+
+### 7. Real-Time Chat (WebSocket)
+- **STOMP Broker**: Instant message routing via WebSocket channel subscriptions.
+- **Subscription Route**: `/topic/chat/{conversationId}` (where `conversationId` is `minUserId_maxUserId`).
+- **Connection Handshake**: `/ws` authenticated securely using JWT tokens in STOMP headers.
+- **Communication Rules**: Users can only exchange messages if they have an `ACCEPTED` exchange request OR an active scheduled session.
+
+### 8. API Standardization, Pagination & Sorting
+- **Unified Schema**: Every controller returns the standardized `ApiResponse<T>` structure:
+```json
+{
+  "success": true,
+  "message": "Operation successful",
+  "data": {},
+  "timestamp": "2026-06-26T10:39:47"
+}
+```
+- **Sorting Support**: Listing resources (Users, Skills, Matches, Requests, Sessions, Reviews, Notifications, Chat History) support parameters: `page`, `size`, `sortBy`, and `direction`.
+
+---
+
+## 🚀 How to Run
+
+### 1. PostgreSQL Setup
+Configure a running PostgreSQL service on port `5432` and run:
 ```sql
 CREATE DATABASE talenttrade;
 ```
 
 ### 2. Configure Settings
-By default, the application is configured in `src/main/resources/application.properties` to connect to PostgreSQL on port `5432` with username `postgres` and password `kolli`. Modify these as needed:
+Modify credentials in `src/main/resources/application.properties`:
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/talenttrade
 spring.datasource.username=postgres
 spring.datasource.password=YOUR_PASSWORD
 ```
 
-### 3. Build the Project
-Compile the files and build the target outputs:
+### 3. Build & Compile
+Execute maven package lifecycle verification:
 ```bash
 mvn clean compile
 ```
 
-### 4. Run the Application
-Run the Spring Boot development server:
+### 4. Run the Dev Server
 ```bash
 mvn spring-boot:run
 ```
-The server will boot up and bind to port `8080`.
+The application will boot up at `http://localhost:8080`.
 
 ---
 
-## 🔑 Authentication & Day 1 REST APIs
+## 📖 Swagger API Documentation
+Open Swagger UI to interact with all API endpoints:
+👉 **[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)**
 
-All application endpoints are documented using Swagger OpenAPI and are fully interactive.
-
-### Public Routes
-- **Register**: `POST /api/auth/register` — Creates a new user profile with verified email and username uniqueness.
-- **Login**: `POST /api/auth/login` — Authenticates credentials and returns a secure JWT bearer token.
-
-### Protected Routes (Requires Bearer Token)
-- **Get Profile**: `GET /api/users/me` — Fetches current user profile.
-- **Update Profile**: `PUT /api/users/me` — Modifies user bio, location, fullName, and username.
+To test secured endpoints:
+1. Call `POST /api/auth/login`.
+2. Copy the returned token.
+3. Click the green **Authorize** padlock in Swagger, enter `Bearer <your_token>`, and confirm.
 
 ---
 
-## 📖 API Documentation & Testing
-
-### Swagger UI
-After starting the server, open your browser and navigate to:
-👉 **[http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)**
-
-To test authenticated endpoints in Swagger:
-1. Make a request to the `POST /api/auth/login` endpoint.
-2. Copy the token string from the JSON response body.
-3. Click the **Authorize** lock icon at the top of the Swagger page.
-4. Input `Bearer <your_copied_token>` or just paste the raw token depending on the prompt, and select Authorize.
-5. You can now execute protected requests successfully!
-
-### Global Exception Responses
-Errors are standardized across all controllers:
-```json
-{
-  "success": false,
-  "message": "Validation failed: Username is required, Email already exists",
-  "timestamp": "2026-06-23T22:31:52.292"
-}
-```
+## 🛠️ Future Enhancements
+- **Google OAuth**: Integrate SSO login for user onboarding.
+- **Google Calendar & Meet**: Auto-schedule meetings and generate Google Meet invites.
+- **AI Skill Recommendations**: Use LLMs to match users based on bio semantic analysis.
+- **Redis Cache**: Speed up dashboards and matching engines with cache eviction.
+- **Docker & CI/CD**: Provide build images and configure pipeline automation.

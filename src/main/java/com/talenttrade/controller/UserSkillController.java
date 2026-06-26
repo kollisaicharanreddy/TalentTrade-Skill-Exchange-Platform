@@ -1,5 +1,6 @@
 package com.talenttrade.controller;
 
+import com.talenttrade.dto.ApiResponse;
 import com.talenttrade.dto.UserSkillRequestDTO;
 import com.talenttrade.dto.UserSkillResponseDTO;
 import com.talenttrade.service.UserSkillService;
@@ -26,28 +27,28 @@ public class UserSkillController {
 
     @PostMapping
     @Operation(summary = "Assign a skill to user", description = "Assigns a teach/learn skill with a level (BEGINNER, INTERMEDIATE, ADVANCED, EXPERT) to the current authenticated user.")
-    public ResponseEntity<UserSkillResponseDTO> addUserSkill(
+    public ResponseEntity<ApiResponse<UserSkillResponseDTO>> addUserSkill(
             @Valid @RequestBody UserSkillRequestDTO request,
             Authentication authentication
     ) {
         String email = authentication.getName();
         UserSkillResponseDTO response = userSkillService.addUserSkill(email, request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return new ResponseEntity<>(ApiResponse.success(response, "Skill assigned to user profile successfully"), HttpStatus.CREATED);
     }
 
     @GetMapping
     @Operation(summary = "Get user skills", description = "Fetches all skills (both teach and learn) assigned to the current authenticated user.")
-    public ResponseEntity<List<UserSkillResponseDTO>> getUserSkills(Authentication authentication) {
+    public ResponseEntity<ApiResponse<List<UserSkillResponseDTO>>> getUserSkills(Authentication authentication) {
         String email = authentication.getName();
         List<UserSkillResponseDTO> response = userSkillService.getUserSkills(email);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response, "User skills retrieved successfully"));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Remove user skill", description = "Removes a skill assignment from the current user profile by its association ID.")
-    public ResponseEntity<Void> removeUserSkill(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<ApiResponse<Void>> removeUserSkill(@PathVariable Long id, Authentication authentication) {
         String email = authentication.getName();
         userSkillService.removeUserSkill(email, id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success(null, "User skill association removed successfully"));
     }
 }

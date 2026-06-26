@@ -8,6 +8,8 @@ import com.talenttrade.exception.ResourceNotFoundException;
 import com.talenttrade.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +50,13 @@ public class UserService {
         log.info("Profile updated successfully for user: {}", email);
 
         return mapToUserResponse(updatedUser);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<UserResponse> getAllUsers(Pageable pageable) {
+        log.debug("Fetching all users paginated");
+        return userRepository.findAll(pageable)
+                .map(this::mapToUserResponse);
     }
 
     private UserResponse mapToUserResponse(User user) {

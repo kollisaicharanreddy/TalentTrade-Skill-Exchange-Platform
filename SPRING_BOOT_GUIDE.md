@@ -2,6 +2,14 @@
 
 Welcome to the **TalentTrade Advanced Spring Boot Developer Guide**. This document is designed for Java developers who want to master advanced topics such as **Spring Security (JWT)**, **WebSockets (STOMP)**, **Spring Data JPA (Relationships & Performance)**, **Spring MVC API architecture**, and **Spring Cache (Redis)**.
 
+---
+
+## 🏗️ High-Level Architecture
+
+![TalentTrade Backend Architecture](./TalentTrade%20Backend%20Architecture.png)
+
+---
+
 For each topic, you will find:
 1. **General Concepts**: Plain-English explanations and high-level architectural walkthroughs.
 2. **Annotations & Classes**: Detailed breakdowns of built-in and user-defined elements.

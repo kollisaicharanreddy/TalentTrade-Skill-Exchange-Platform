@@ -4,6 +4,12 @@ TalentTrade is a production-ready, peer-to-peer skill exchange platform backend 
 
 ---
 
+## 🏗️ High-Level Architecture
+
+![TalentTrade Backend Architecture](./TalentTrade%20Backend%20Architecture.png)
+
+---
+
 ## 🛠️ Technology Stack
 
 - **Core Framework**: Java 21 & Spring Boot 3.3.2

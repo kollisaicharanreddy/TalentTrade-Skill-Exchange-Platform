@@ -649,3 +649,159 @@ Every REST controller in `TalentTrade` returns a standardized `ApiResponse<T>` J
     * *Input*: Authenticated context
     * *Output*: `ApiResponse<DashboardResponseDTO>` (counts of skills, matches, pending requests, upcoming sessions, average rating)
     * *Description*: Returns full user statistics for dashboard layouts.
+
+---
+
+## 8. Complete Project Flow & Execution Lifecycle
+
+When describing the architecture and operation of `TalentTrade` (e.g., in a technical interview or code walkthrough), it is best explained as a sequential lifecycle. Here is the step-by-step execution path of the project, including how components call one another, their dependencies, and the core concepts involved at each stage.
+
+```text
+[Step 1: System Boot] 
+      │
+      ▼
+[Step 2: Register] ──► Password Encryption (BCrypt) ──► Persist in PostgreSQL
+      │
+      ▼
+[Step 3: Login] ──► Credentials Check (DAO Provider) ──► Generate signed JWT token
+      │
+      ▼
+[Step 4: Profile] ──► Add TEACH & LEARN skills (Many-to-Many Junctions)
+      │
+      ▼
+[Step 5: Match Engine] ──► Compute Reciprocal Intersection Scores ──► Query Matches
+      │
+      ▼
+[Step 6: Handshake] ──► POST Exchange Request (PENDING) ──► Notify User B (Transaction)
+      │
+      ▼
+[Step 7: Schedule] ──► ACCEPT Request ──► Create Session (Time Conflict Checks)
+      │
+      ▼
+[Step 8: WS Connect] ──► Upgrade to WSS ──► Intercept CONNECT frame ──► Authenticate STOMP via JWT
+      │
+      ▼
+[Step 9: Chat] ──► Check Permission (Access Check) ──► Save Message ──► Broadcast to Subscribed Topic
+      │
+      ▼
+[Step 10: Review] ──► Complete Session ──► Write Review (Self-check) ──► Update User Ratings
+      │
+      ▼
+[Step 11: Dashboard] ──► Aggregate counts & compute metrics for Home UI display
+```
+
+---
+
+### Step 1: System Boot & Initialization
+1. **Action**: The Spring Boot engine bootstraps from the [TalentTradeApplication](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/TalentTradeApplication.java) main class.
+2. **Database Verification**: Under the hood, Spring reads `application.properties`. Hibernate detects the property `spring.jpa.hibernate.ddl-auto=update` and scans classes annotated with `@Entity`. It auto-synchronizes the tables (`users`, `skills`, `user_skills`, etc.) with PostgreSQL.
+3. **Security Injection**: Spring Security constructs the `SecurityFilterChain` bean defined in [SecurityConfig](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/security/SecurityConfig.java), defining public vs secured endpoints, and setups WebSocket connection routes.
+
+---
+
+### Step 2: User Onboarding (Registration)
+1. **Trigger**: An unauthenticated user submits a registration request.
+2. **Execution Path**:
+   - The browser hits `POST /api/auth/register` carrying a `RegisterRequest` DTO payload.
+   - [AuthController](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/AuthController.java) validates parameters (e.g. `@Email`, `@NotBlank`) and routes to [AuthService](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/AuthService.java).
+   - **Key Concept: Password Hashing**: To protect user security, the raw password is encrypted using a strong one-way hash algorithm (`BCryptPasswordEncoder`) before storing.
+   - The user profile entity is saved in the database via the `UserRepository` interface.
+
+---
+
+### Step 3: Authentication (Login)
+1. **Trigger**: User inputs email and password to log in.
+2. **Execution Path**:
+   - Client hits `POST /api/auth/login` carrying `LoginRequest`.
+   - `AuthController` invokes `AuthService.login()`.
+   - **Key Concept: DaoAuthenticationProvider**: The service passes credentials to Spring Security's `AuthenticationManager`. It delegates to `DaoAuthenticationProvider`, which requests the user data via [CustomUserDetailsService](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/security/CustomUserDetailsService.java) and compares the stored BCrypt hash with the typed password.
+   - If authentication is successful, the service uses `JwtService.generateToken()` to build a stateless **JWT (JSON Web Token)**. The token encodes the username and expiration, cryptographically signed with the base64-encoded secret key.
+   - The token is sent back inside a `LoginResponse` DTO. The client stores it locally.
+
+---
+
+### Step 4: Profile Enrichment (Adding Skills)
+1. **Trigger**: The logged-in user configures what they can teach and what they want to learn.
+2. **Execution Path**:
+   - The client invokes `POST /api/users/skills` with a `UserSkillRequestDTO` containing the global `skillId`, `type` (TEACH or LEARN), and skill `level`.
+   - [UserSkillController](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/UserSkillController.java) delegates to `UserSkillService`.
+   - **Key Concept: Many-to-Many Junction mapping**: Since a User can have multiple Skills, and a Skill can belong to multiple Users, the database maps this using an intermediate table `user_skills`. This is represented by the [UserSkill](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/entity/UserSkill.java) entity, which links to `User` and `Skill` with `@ManyToOne` relationships.
+   - The skill relationship is saved via `UserSkillRepository`.
+
+---
+
+### Step 5: Reciprocal Matching Engine Execution
+1. **Trigger**: User opens the dashboard to see match recommendations.
+2. **Execution Path**:
+   - Client hits `GET /api/matches` or triggers a match recalculation via `POST /api/matches/refresh`.
+   - [MatchController](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/MatchController.java) triggers `MatchService`.
+   - **Key Concept: Reciprocal Scoring Logic**: The match engine executes custom queries to retrieve other users where:
+     * User A teaches a skill that User B wants to learn.
+     * User B teaches a skill that User A wants to learn.
+   - It computes a compatibility score based on how many skills match and their respective levels. Matches are saved to the `matches` table and returned.
+
+---
+
+### Step 6: Connection Handshake (Exchange Requests)
+1. **Trigger**: User A sends a connection request to User B from their match suggestions list.
+2. **Execution Path**:
+   - Client hits `POST /api/requests` with an `ExchangeRequestDTO` containing the target user's ID.
+   - [ExchangeRequestController](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/ExchangeRequestController.java) invokes `ExchangeRequestService`.
+   - **Key Concept: Transaction Boundaries (`@Transactional`)**: The request must be saved in the database with status `PENDING`, and simultaneously, an alert must be created in the `notifications` table for User B. Marking the service method as `@Transactional` ensures that both operations succeed together; if one fails, the entire database transaction rolls back.
+   - User B later views the request and hits `PUT /api/requests/{id}/accept`. The status transitions to `ACCEPTED` in the database.
+
+---
+
+### Step 7: Session Scheduling & Overlap Collision Check
+1. **Trigger**: Matched users schedule a learning session.
+2. **Execution Path**:
+   - User A hits `POST /api/sessions` with date, time window, notes, and a meeting link.
+   - [SessionController](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/SessionController.java) delegates to `SessionService`.
+   - **Key Concept: Interval Overlap Logic**: To prevent calendar booking collisions, before saving a session, the system queries the database for any existing sessions booked for either User A or User B during that date. It evaluates this mathematical overlap:
+     ```
+     !(existingSession.endTime <= newSession.startTime || existingSession.startTime >= newSession.endTime)
+     ```
+     If an overlap exists, it aborts the process by throwing `InvalidSessionStateException` which gets translated to an HTTP 400. Otherwise, the session is scheduled.
+
+---
+
+### Step 8: WebSockets Handshake & STOMP Authentication
+1. **Trigger**: Client opens the application and establishes a real-time message connection.
+2. **Execution Path**:
+   - Client requests a WebSocket connection by hitting `/ws`.
+   - **Key Concept: STOMP Connection Interception**: Standard WebSocket requests cannot easily send custom HTTP authorization headers. Thus, the client sends a STOMP `CONNECT` frame carrying their JWT token inside a custom native STOMP header.
+   - [WebSocketConfig](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/config/WebSocketConfig.java)'s `ChannelInterceptor` captures the inbound connection, extracts the JWT, verifies it via `JwtService`, loads details via `CustomUserDetailsService`, and sets the socket `Principal` context.
+
+---
+
+### Step 9: Messaging Permission Check & Chat Broadcast
+1. **Trigger**: User A sends a real-time chat message to User B.
+2. **Execution Path**:
+   - Client sends a STOMP frame with payload `ChatMessageRequestDTO` to endpoint `/app/chat.send`.
+   - [ChatController](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/ChatController.java) intercepts this frame.
+   - **Key Concept: Communication Guard Rules**: To prevent spamming, the `ChatService` checks the database for two conditions:
+     1. Is there an `ACCEPTED` exchange request between the two users?
+     2. OR, do they have an active scheduled learning session?
+     If neither condition is met, the message is blocked.
+   - If authorized, the message is persisted to the database and broadcasted to `/topic/chat/{conversationId}` using `SimpMessagingTemplate` so both users receive the text instantly on their UI screen.
+
+---
+
+### Step 10: Feedback & Rating Aggregation
+1. **Trigger**: The scheduled session takes place, after which it is marked completed and reviewed.
+2. **Execution Path**:
+   - A user completes the session via `PUT /api/sessions/{id}/complete`.
+   - A user leaves feedback via `POST /api/reviews` containing the session ID, rating (1-5), and comments.
+   - **Key Concept: Self-Review & Duplicate Guard Rails**: The service checks that the review writer is indeed a participant in the session, that they are not reviewing themselves, and that they haven't already left a review for this specific session.
+   - Upon saving the review, the system triggers a recalculation of the reviewee's average rating (which is stored on their profile page).
+
+---
+
+### Step 11: Real-time UI Summary (Dashboard)
+1. **Trigger**: The user views their home dashboard.
+2. **Execution Path**:
+   - Client hits `GET /api/dashboard`.
+   - [DashboardController](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/DashboardController.java) calls `DashboardService`.
+   - The service aggregates database metrics: total skills configured, total reciprocal matches found, counts of pending connection requests, count of upcoming sessions, and the user's average rating.
+   - It returns the counts inside a `DashboardResponseDTO` to populate the frontend home widgets.
+

@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # PostgreSQL Database Service
+  # ==========================================
+  db:
+    image: postgres:16-alpine
+    container_name: talenttrade-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: talenttrade
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # Named volume to persist database files across container lifecycles
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Production-grade health check to verify PostgreSQL is accepting connections
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d talenttrade"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - talenttrade-network
+
+  # ==========================================
+  # Spring Boot Application Service
+  # ==========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: talenttrade-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Connect to PostgreSQL container using service name 'db' as hostname
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/talenttrade
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      # Ensure Spring Boot logging is colorized inside terminal logs
+      SPRING_OUTPUT_ANSI_ENABLED: ALWAYS
+    depends_on:
+      db:
+        # Wait until the PostgreSQL database container health check passes
+        condition: service_healthy
+    networks:
+      - talenttrade-network
+
+  # ==========================================
+  # React / Vite Frontend Service (Nginx)
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: talenttrade-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    networks:
+      - talenttrade-network
+
+# ==========================================
+# Network and Volume Declarations
+# ==========================================
+networks:
+  # Isolated network for secure container-to-container communication
+  talenttrade-network:
+    driver: bridge
+
+volumes:
+  # Named volume for database persistence
+  postgres_data:
+    driver: local

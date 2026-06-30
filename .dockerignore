@@ -1,0 +1,32 @@
+# Build files
+target/
+*.jar
+*.war
+*.ear
+
+# Git and general configurations
+.git
+.gitignore
+.dockerignore
+.env
+Dockerfile*
+docker-compose*.yml
+
+# IDE configurations
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# Frontend directory (has its own build process/container if dockerized)
+frontend/
+
+# Local guides and documents
+*.md
+*.png
+*.json
+api_test*
+walkthrough*

@@ -196,42 +196,119 @@ CREATE TABLE chat_messages (
 
 ## 🚀 How to Run
 
-### 1. PostgreSQL Setup
-Configure a running PostgreSQL service on port `5432` and run:
-```sql
-CREATE DATABASE talenttrade;
-```
+You can run this application either using **Docker Compose (Recommended)** or **Locally**.
 
-### 2. Configure Settings
-Modify credentials in `src/main/resources/application.properties`:
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/talenttrade
-spring.datasource.username=postgres
-spring.datasource.password=YOUR_PASSWORD
-```
+### Method 1: Docker Compose (Recommended)
+This approach launches the complete backend and frontend stack (Spring Boot application, PostgreSQL database, and React/Vite frontend) in isolated containers with zero manual configuration. 
 
-### 3. Build & Compile
-Execute maven package lifecycle verification:
+#### Prerequisites
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+#### One-Command Startup
+Clone the repository, navigate to the root directory, and execute:
 ```bash
-mvn clean compile
+docker compose up --build
 ```
+This single command will:
+1. Create an isolated Docker bridge network.
+2. Build the multi-stage Spring Boot backend Docker image.
+3. Start the PostgreSQL database container and check its health.
+4. Build the multi-stage React/Vite frontend Docker image.
+5. Create the `talenttrade` database automatically.
+6. Boot the Spring Boot application and auto-generate/update database tables using Hibernate DDL.
+7. Launch the Nginx web server, exposing the user interface at **`http://localhost`** (port 80).
+8. Automatically proxy REST and WebSocket traffic from the frontend to the backend container.
 
-### 4. Run the Dev Server
-```bash
-mvn spring-boot:run
-```
-The application will boot up at `http://localhost:8080`.
+---
+
+### Method 2: Manual Local Running
+If you prefer running the application outside of Docker:
+1. **PostgreSQL Setup**: Ensure PostgreSQL is running on port `5432` and create a database:
+   ```sql
+   CREATE DATABASE talenttrade;
+   ```
+2. **Settings**: Modify database credentials in `src/main/resources/application.properties` or set them as environment variables.
+3. **Run Backend**:
+   ```bash
+   mvn clean compile
+   mvn spring-boot:run
+   ```
+4. **Run Frontend**:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+---
+
+## 🐳 Docker Architecture & Design Decisions
+
+### 1. Multi-Stage Dockerfiles
+We utilize **multi-stage builds** for both the backend and frontend to optimize performance, file size, and security:
+* **Spring Boot (Backend)**: 
+  * **Build Stage**: Uses a full Maven JDK image (`maven:3.9.6-eclipse-temurin-21-alpine`) to package the application. Dependencies are cached using layer caching via `mvn dependency:go-offline`.
+  * **Runtime Stage**: Uses a lightweight JRE Alpine image (`eclipse-temurin:21-jre-alpine`) executing under a custom non-root system user (`spring`) for security.
+* **React/Vite (Frontend)**:
+  * **Build Stage**: Uses a Node Alpine image (`node:20-alpine`) to install dependencies and run production compilation (`npm run build`).
+  * **Runtime Stage**: Uses a lightweight Nginx web server (`nginx:1.25-alpine`) to serve the static assets.
+
+### 2. Nginx Web Server & Reverse Proxying
+In the frontend container, Nginx acts as:
+* **Static File Server**: Delivers React assets and utilizes `try_files` to redirect non-file requests to `index.html`, allowing React Router client-side routing to work seamlessly.
+* **Reverse Proxy**: Proxies `/api` traffic internally to the Java backend container (`http://app:8080/api`) and manages the `/ws` route to pass WebSocket connections with appropriate upgrade headers. This eliminates Cross-Origin Resource Sharing (CORS) issues in production!
+
+### 3. Isolated Container Networking
+All services reside within a custom Docker bridge network (`talenttrade-network`):
+* The backend connects to the database via `jdbc:postgresql://db:5432/talenttrade` (using the container hostname `db`).
+* The frontend Nginx container proxies API calls internally to `http://app:8080` (using the container hostname `app`).
+* Port mapping exposes port `80` (HTTP) for the frontend container and `8080` (API/Swagger) for the backend container on the host machine.
+
+### 4. Database Persistence
+We define a named Docker volume (`postgres_data`) mapped to `/var/lib/postgresql/data` in the database container. This ensures that even if you tear down, rebuild, or restart the containers, your user accounts, matching tables, and chat histories persist safely on your host machine.
+
+### 5. Container Startup Synchronization (Health Checks)
+To avoid race conditions where Spring Boot starts up and attempts to connect before PostgreSQL has initialized, we configured a container health check:
+* The database uses `pg_isready` to verify readiness.
+* The Spring Boot app service is marked with `depends_on` containing the `condition: service_healthy` modifier.
+* The application container startup is blocked until the PostgreSQL health check reports green.
+
+### 6. Seamless Database and Schema Creation
+* **Database Creation**: The official PostgreSQL image automatically spawns a database with the name specified in the `POSTGRES_DB` environment variable on startup.
+* **Schema Generation**: Hibernate is configured via `spring.jpa.hibernate.ddl-auto=update` in `application.properties`. When Spring Boot boots up, Hibernate scans the `@Entity` classes (such as `User`, `ExchangeRequest`, `ChatMessage`, etc.) and automatically creates or updates the tables inside the database.
+
+---
+
+## ⚙️ Docker Lifecycle Command Catalog
+
+Below are all the commands needed to manage the container lifecycles:
+
+| Operation | Command |
+| :--- | :--- |
+| **Build & Start Containers** (Foreground) | `docker compose up --build` |
+| **Start Containers** (Background / Detached) | `docker compose up -d` |
+| **Stop Containers** (Gracefully) | `docker compose stop` |
+| **Restart Containers** | `docker compose restart` |
+| **View Combined Container Logs** | `docker compose logs -f` |
+| **View Backend App Logs Only** | `docker compose logs -f app` |
+| **View Frontend Container Logs Only** | `docker compose logs -f frontend` |
+| **Access PostgreSQL Command Line (CLI)** | `docker exec -it talenttrade-db psql -U postgres -d talenttrade` |
+| **Stop and Remove Containers/Networks** | `docker compose down` |
+| **Remove Containers, Networks & Volumes** | `docker compose down -v` |
 
 ---
 
 ## 📖 Swagger API Documentation
-Open Swagger UI to interact with all API endpoints:
-👉 **[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)**
 
-To test secured endpoints:
-1. Call `POST /api/auth/login`.
-2. Copy the returned token.
-3. Click the green **Authorize** padlock in Swagger, enter `Bearer <your_token>`, and confirm.
+Once containers are active, access the interactive API docs at:
+👉 **[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)** or via the Nginx proxy at **`http://localhost/swagger-ui.html`**.
+
+### Testing Secured Endpoints
+1. Call `POST /api/auth/login` (or create a user via `POST /api/auth/register` first).
+2. Copy the returned `token` from the JSON response.
+3. Click the green **Authorize** padlock button at the top right of the Swagger UI page.
+4. Input `Bearer <your_copied_token>` and submit.
+5. All authorized endpoints are now testable directly in the browser!
 
 ---
 
@@ -240,4 +317,6 @@ To test secured endpoints:
 - **Google Calendar & Meet**: Auto-schedule meetings and generate Google Meet invites.
 - **AI Skill Recommendations**: Use LLMs to match users based on bio semantic analysis.
 - **Redis Cache**: Speed up dashboards and matching engines with cache eviction.
-- **Docker & CI/CD**: Provide build images and configure pipeline automation.
+- **CI/CD Integration**: Add GitHub Actions workflow to build, test, and push the Docker images to a container registry.
+
+

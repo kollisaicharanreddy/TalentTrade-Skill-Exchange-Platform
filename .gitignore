@@ -1,0 +1,22 @@
+# Secrets and Environment Variables
+.env
+
+# Maven Build output
+target/
+*.jar
+*.war
+*.ear
+
+# IDE and Editor Files
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# OS and Log Files
+*.log
+.DS_Store
+Thumbs.db

@@ -148,13 +148,6 @@ export const SkillsPage = () => {
           <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">Skills Portfolio</h1>
           <p className="text-sm text-zinc-500">Manage what skills you can teach and what you want to learn.</p>
         </div>
-        <Button 
-          onClick={() => setCreateDialogOpen(true)}
-          className="font-bold flex items-center space-x-1 sm:self-end"
-        >
-          <Plus className="h-4 w-4" />
-          <span>New Universal Skill</span>
-        </Button>
       </div>
 
       {/* Global search and registry section */}
@@ -195,7 +188,7 @@ export const SkillsPage = () => {
                 ))
               ) : (
                 <div className="text-center py-4 text-xs text-zinc-500">
-                  No match found. Click "New Universal Skill" to register a new one.
+                  No match found in the universal registry.
                 </div>
               )}
             </div>
@@ -351,65 +344,7 @@ export const SkillsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG 2: CREATE UNIVERSAL REGISTRY SKILL */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent onOpenChange={setCreateDialogOpen}>
-          <DialogHeader>
-            <DialogTitle>Create Universal Skill</DialogTitle>
-            <DialogDescription>
-              Register a new unique skill into the global directory for all users to exchange.
-            </DialogDescription>
-          </DialogHeader>
 
-          <form onSubmit={handleCreateRegistrySkill} className="space-y-4 py-2">
-            {/* Skill Name */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Skill Name</label>
-              <Input
-                placeholder="e.g. TypeScript, Spanish, Oil Painting"
-                value={newSkillName}
-                onChange={(e) => setNewSkillName(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Category */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Category</label>
-              <Select value={newSkillCategory} onChange={(e) => setNewSkillCategory(e.target.value)}>
-                <option value="Programming">Programming</option>
-                <option value="Design">Design</option>
-                <option value="Language">Language</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Business">Business</option>
-                <option value="Music">Music</option>
-                <option value="Academics">Academics</option>
-                <option value="Lifestyle">Lifestyle</option>
-              </Select>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Description</label>
-              <Textarea
-                placeholder="A short description of this skill..."
-                rows={3}
-                value={newSkillDesc}
-                onChange={(e) => setNewSkillDesc(e.target.value)}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" className="font-bold">
-                Register Skill
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
     </div>
   );

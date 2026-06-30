@@ -4,7 +4,6 @@ import com.talenttrade.dto.SkillDTO;
 import com.talenttrade.dto.SkillResponseDTO;
 import com.talenttrade.entity.Skill;
 import com.talenttrade.exception.ResourceNotFoundException;
-import com.talenttrade.exception.SkillAlreadyExistsException;
 import com.talenttrade.repository.SkillRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,13 +22,16 @@ public class SkillService {
     @Transactional
     public SkillResponseDTO createSkill(SkillDTO skillDTO) {
         log.info("Attempting to create skill: {}", skillDTO.getName());
-        if (skillRepository.existsByName(skillDTO.getName())) {
-            log.warn("Skill creation failed - skill already exists: {}", skillDTO.getName());
-            throw new SkillAlreadyExistsException("Skill already exists: " + skillDTO.getName());
+        String nameTrimmed = skillDTO.getName().trim();
+        
+        java.util.Optional<Skill> existingSkill = skillRepository.findByNameIgnoreCase(nameTrimmed);
+        if (existingSkill.isPresent()) {
+            log.info("Skill already exists case-insensitively. Returning existing skill details for: {}", nameTrimmed);
+            return mapToResponseDTO(existingSkill.get());
         }
 
         Skill skill = Skill.builder()
-                .name(skillDTO.getName())
+                .name(nameTrimmed)
                 .category(skillDTO.getCategory())
                 .description(skillDTO.getDescription())
                 .build();

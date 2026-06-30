@@ -26,6 +26,7 @@ For each topic, you will find:
 - [5. Caching & Performance Optimization (Planned Enhancement)](#5-caching--performance-optimization-planned-enhancement)
 - [6. Boilerplate Reduction & Documentation (Lombok & Swagger)](#6-boilerplate-reduction--documentation-lombok--swagger)
 - [7. Complete Controller & API Reference (All 12 Controllers)](#7-complete-controller--api-reference-all-12-controllers)
+- [8. Containerization & Deployment Architecture (Docker & Docker Compose)](#8-containerization--deployment-architecture-docker--docker-compose)
 
 ---
 
@@ -804,4 +805,75 @@ When describing the architecture and operation of `TalentTrade` (e.g., in a tech
    - [DashboardController](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/controller/DashboardController.java) calls `DashboardService`.
    - The service aggregates database metrics: total skills configured, total reciprocal matches found, counts of pending connection requests, count of upcoming sessions, and the user's average rating.
    - It returns the counts inside a `DashboardResponseDTO` to populate the frontend home widgets.
+
+---
+
+## 8. Containerization & Deployment Architecture (Docker & Docker Compose)
+
+### A. General Concepts
+In modern microservices architecture, we package application code, dependencies, runtime environments, and configuration into immutable units called **Containers**.
+* **Multi-Stage Build**: In a production-grade Dockerfile, we separate the build pipeline from the runtime execution. This ensures our final deployable image contains only the runtime binaries and JRE, leaving behind large build tools (like Maven, Node compiler libraries), which dramatically reduces the image size and vulnerability surface.
+* **Isolated Networking**: We construct a private bridge network. Containers address each other by their declared container/service names. Docker's internal DNS automatically translates these names to dynamically allocated private container IPs.
+* **Database Seeding**: Initial database values (such as default lists of universal registry items) are seeded automatically on application bootstrap if the tables are clean. This provides an out-of-the-box working application for developers and automated environments.
+* **Case-Insensitive Deduplication**: Ensuring database fields that must be unique (such as user-submitted names or tags) are checked case-insensitively before insertion. If a duplicate is submitted, the system adapts to retrieve the existing one rather than erroring out.
+
+---
+
+### B. Annotations & Core Elements
+* `CommandLineRunner`: A functional Spring Boot interface used to indicate that a bean should run its execution block when it is fully initialized by the Spring Application context.
+* `@Component`: Automatically detects and registers custom class beans during classpath scanning.
+* `${PROPERTY_NAME:DEFAULT_VALUE}`: Spring property value syntax supporting environment overrides with fallback default values.
+* `findByNameIgnoreCase()`: Spring Data JPA query method keyword that compiles an SQL statement with `LOWER(column) = LOWER(?)` for case-insensitive records searches.
+
+---
+
+### C. Project Application
+
+#### 1. Backend [Dockerfile](file:///c:/TRAINING/TalentTrade/Dockerfile)
+A multi-stage build:
+* **Stage 1 (Build)**: Leverages `maven:3.9.6-eclipse-temurin-21-alpine` to load configurations, run dependency go-offline resolving (`mvn dependency:go-offline` cached layer), and compiles the runnable JAR.
+* **Stage 2 (Runtime)**: Uses JRE alpine `eclipse-temurin:21-jre-alpine`, configures a custom non-root system user `spring`, and runs the backend using container-aware RAM settings (`-XX:MaxRAMPercentage=75.0`).
+
+#### 2. Frontend [frontend/Dockerfile](file:///c:/TRAINING/TalentTrade/frontend/Dockerfile) and [frontend/nginx.conf](file:///c:/TRAINING/TalentTrade/frontend/nginx.conf)
+* **Node Build**: Compiles React and Vite templates into static SPA distribution folders (`dist/`).
+* **Nginx Alpine**: Acts as the production web server serving React assets and proxying `/api` and `/ws` WebSocket requests to the backend `app:8080` internally.
+
+#### 3. [docker-compose.yml](file:///c:/TRAINING/TalentTrade/docker-compose.yml)
+Coordinates three services:
+1. `db`: Run in `postgres:16-alpine` on private port 5432, storing persistence records on named volume `postgres_data`, and exposing a `pg_isready` healthcheck.
+2. `app`: Built from root context, starting only when `db` is reported healthy, resolving credentials from `.env`, and running on port 8080.
+3. `frontend`: Built from `./frontend` context, running Nginx on port 80 to proxy traffic to the app backend.
+
+#### 4. [DataInitializer.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/config/DataInitializer.java)
+Seeds 18 default popular skills on startup:
+```java
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class DataInitializer implements CommandLineRunner {
+    private final SkillRepository skillRepository;
+
+    @Override
+    public void run(String... args) {
+        // Seeds core popular skills across categories case-insensitively
+        seedSkills();
+    }
+}
+```
+
+#### 5. Graceful Deduplication in [SkillService.java](file:///c:/TRAINING/TalentTrade/src/main/java/com/talenttrade/service/SkillService.java)
+```java
+    @Transactional
+    public SkillResponseDTO createSkill(SkillDTO skillDTO) {
+        String nameTrimmed = skillDTO.getName().trim();
+        Optional<Skill> existingSkill = skillRepository.findByNameIgnoreCase(nameTrimmed);
+        if (existingSkill.isPresent()) {
+            return mapToResponseDTO(existingSkill.get()); // Adapt and reuse existing
+        }
+        // Save new skill if not present
+        Skill savedSkill = skillRepository.save(newSkill);
+        return mapToResponseDTO(savedSkill);
+    }
+```
+
 

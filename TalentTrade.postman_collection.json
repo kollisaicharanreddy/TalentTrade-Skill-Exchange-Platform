@@ -571,6 +571,131 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get User Skills",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/users/skills",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"users",
+								"skills"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove User Skill",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/users/skills/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"users",
+								"skills",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Skill by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/skills/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"skills",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Skill",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/skills/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"skills",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -708,6 +833,37 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get Match Details by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/matches/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"matches",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -829,6 +985,135 @@
 								"requests",
 								"1",
 								"accept"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/requests?page=0&size=10&sortBy=createdAt&direction=desc",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"requests"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt"
+								},
+								{
+									"key": "direction",
+									"value": "desc"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sent Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/requests/sent?page=0&size=10&sortBy=createdAt&direction=desc",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"requests",
+								"sent"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt"
+								},
+								{
+									"key": "direction",
+									"value": "desc"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Request by Bob",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/requests/1/reject",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"requests",
+								"1",
+								"reject"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_bob}}",
+									"type": "string"
+								}
 							]
 						}
 					},
@@ -957,6 +1242,287 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get Session Details",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/sessions/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"sessions",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Session",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/sessions/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"sessions",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"exchangeRequestId\": 1,\n  \"mentorId\": 1,\n  \"learnerId\": 2,\n  \"scheduledDate\": \"2026-07-21\",\n  \"startTime\": \"15:00:00\",\n  \"endTime\": \"16:30:00\",\n  \"meetingLink\": \"https://meet.google.com/xyz-pdq-rst\",\n  \"notes\": \"Updated session notes cover advanced topics.\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Session",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/sessions/1/cancel",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"sessions",
+								"1",
+								"cancel"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Session",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/sessions/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"sessions",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Upcoming Sessions (Paginated)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/sessions/upcoming?page=0&size=10&sortBy=scheduledDate&direction=asc",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"sessions",
+								"upcoming"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "sortBy",
+									"value": "scheduledDate"
+								},
+								{
+									"key": "direction",
+									"value": "asc"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Completed Sessions (Paginated)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/sessions/completed?page=0&size=10&sortBy=scheduledDate&direction=desc",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"sessions",
+								"completed"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "sortBy",
+									"value": "scheduledDate"
+								},
+								{
+									"key": "direction",
+									"value": "desc"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Session History (Paginated)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/sessions/history?page=0&size=10&sortBy=scheduledDate&direction=desc",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"sessions",
+								"history"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "sortBy",
+									"value": "scheduledDate"
+								},
+								{
+									"key": "direction",
+									"value": "desc"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -1051,6 +1617,86 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Get My Reviews (Paginated)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/reviews/me?page=0&size=10&sortBy=createdAt&direction=desc",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"reviews",
+								"me"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt"
+								},
+								{
+									"key": "direction",
+									"value": "desc"
+								}
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Review",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/reviews/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"reviews",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -1129,6 +1775,100 @@
 								{
 									"key": "direction",
 									"value": "desc"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/notifications/1/read",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"notifications",
+								"1",
+								"read"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark All Notifications as Read",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/notifications/read-all",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"notifications",
+								"read-all"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Notification",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/notifications/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"notifications",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
 								}
 							]
 						}
@@ -1233,6 +1973,69 @@
 								{
 									"key": "direction",
 									"value": "asc"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Message as Read",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/chat/read/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"chat",
+								"read",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_bob}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Chat Message",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/chat/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"chat",
+								"1"
+							]
+						},
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token_alice}}",
+									"type": "string"
 								}
 							]
 						}

@@ -15,9 +15,9 @@ The application is structured into a containerized Java 21 / Spring Boot 3 backe
 ---
 
 ## 🔗 Production Live Demo
-* **Frontend Web App**: [https://talenttrade-frontend.vercel.app](https://talenttrade-frontend.vercel.app)
-* **Backend API (Swagger Docs)**: [https://talenttrade-backend.railway.app/swagger-ui.html](https://talenttrade-backend.railway.app/swagger-ui.html)
-* **WebSocket Endpoint**: [https://talenttrade-backend.railway.app/ws](https://talenttrade-backend.railway.app/ws)
+* **Frontend Web App**: [https://talent-trade-skill-exchange-platfor.vercel.app](https://talent-trade-skill-exchange-platfor.vercel.app)
+* **Backend API (Swagger Docs)**: [https://talenttrade-skill-exchange-platform-production.up.railway.app/swagger-ui.html](https://talenttrade-skill-exchange-platform-production.up.railway.app/swagger-ui.html)
+* **WebSocket Endpoint**: [https://talenttrade-skill-exchange-platform-production.up.railway.app/ws](https://talenttrade-skill-exchange-platform-production.up.railway.app/ws)
 
 ---
 

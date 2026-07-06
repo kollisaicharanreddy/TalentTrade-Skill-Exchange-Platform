@@ -91,7 +91,28 @@ export const ChatProvider = ({ children }) => {
     }
 
     try {
-      const socket = new SockJS('/ws');
+      const getWsUrl = () => {
+        const wsUrl = import.meta.env.VITE_WS_URL;
+        if (wsUrl) return wsUrl;
+
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        if (apiBaseUrl) {
+          try {
+            if (apiBaseUrl.startsWith('http://') || apiBaseUrl.startsWith('https://')) {
+              const url = new URL(apiBaseUrl);
+              const pathname = url.pathname.endsWith('/api')
+                ? url.pathname.slice(0, -4) + '/ws'
+                : (url.pathname.endsWith('/') ? url.pathname + 'ws' : url.pathname + '/ws');
+              return `${url.protocol}//${url.host}${pathname}`;
+            }
+          } catch (e) {
+            console.error("Failed to parse VITE_API_BASE_URL for WebSocket connection:", e);
+          }
+        }
+        return '/ws';
+      };
+
+      const socket = new SockJS(getWsUrl());
       const client = Stomp.over(socket);
       
       // Mute debug logs for clean console, but keep error reporting

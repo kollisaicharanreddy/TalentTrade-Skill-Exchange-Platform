@@ -15,6 +15,14 @@ RUN npm install
 # Copy frontend source files
 COPY . .
 
+# Add build arguments for production URLs
+ARG VITE_API_BASE_URL
+ARG VITE_WS_URL
+
+# Set environment variables for build time
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_WS_URL=$VITE_WS_URL
+
 # Run compilation build command. Generates production-ready 'dist/' assets.
 RUN npm run build
 

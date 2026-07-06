@@ -1,48 +1,106 @@
-# TalentTrade - Skill Exchange Platform Backend
+# TalentTrade - Skill Exchange Platform
 
-TalentTrade is a production-ready, peer-to-peer skill exchange platform backend built on Spring Boot. It empowers users to trade skills they possess (TEACH) for skills they want to acquire (LEARN) through a non-monetary matching engine, exchange requests, virtual scheduling, session feedback, in-app notifications, and secure real-time messaging using WebSockets.
+![Build Status](https://img.shields.io/badge/Build-passing-brightgreen)
+![License](https://img.shields.io/badge/License-MIT-blue)
+![Java Version](https://img.shields.io/badge/Java-21-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.2-green)
+![Database](https://img.shields.io/badge/PostgreSQL-Neon-blue)
+![Deployment](https://img.shields.io/badge/Deploy-Railway%20%7C%20Vercel-purple)
+![WebSockets](https://img.shields.io/badge/WebSockets-SockJS-success)
+
+TalentTrade is a production-grade, peer-to-peer skill exchange platform. It empowers users to trade skills they possess (**TEACH**) for skills they want to acquire (**LEARN**) through a non-monetary mutual matching engine, exchange request workflows, virtual scheduling, session feedback, in-app notifications, and secure real-time messaging using WebSockets.
+
+The application is structured into a containerized Java 21 / Spring Boot 3 backend and a modern React / Vite frontend, optimized for cloud deployments.
 
 ---
 
-## 🏗️ High-Level Architecture
+## 🔗 Production Live Demo
+* **Frontend Web App**: [https://talenttrade-frontend.vercel.app](https://talenttrade-frontend.vercel.app)
+* **Backend API (Swagger Docs)**: [https://talenttrade-backend.railway.app/swagger-ui.html](https://talenttrade-backend.railway.app/swagger-ui.html)
+* **WebSocket Endpoint**: [https://talenttrade-backend.railway.app/ws](https://talenttrade-backend.railway.app/ws)
 
-![TalentTrade Backend Architecture](./TalentTrade%20Backend%20Architecture.png)
+---
+
+## 🏗️ Production Architecture
+
+```mermaid
+graph TD
+    Client[React SPA Frontend - Vercel]
+    Router[Nginx Reverse Proxy - Docker Local]
+    SpringBoot[Spring Boot 3 REST API & WS Broker - Railway]
+    Postgres[(Serverless PostgreSQL DB - Neon)]
+
+    subgraph Cloud Deployment
+        Client -->|REST Requests HTTPS| SpringBoot
+        Client -->|WebSocket Handshake HTTPS/WSS| SpringBoot
+        SpringBoot -->|JDBC Connection Pool| Postgres
+    end
+
+    subgraph Local Docker Compose
+        Router -->|Serves Static Files| Client
+        Router -->|Proxy /api| SpringBoot
+        Router -->|Proxy /ws| SpringBoot
+    end
+```
+
+In production:
+1. **Frontend**: The React client is built as static files and deployed to **Vercel** CDN for fast delivery.
+2. **Backend**: The Spring Boot microservice is packaged as a lightweight Docker container and deployed to **Railway**.
+3. **Database**: PostgreSQL is hosted in **Neon** providing managed, serverless storage with automated scaling.
+4. **WebSocket Communication**: Client browsers bypass static servers and establish direct connections with the Spring Boot Broker on Railway using authenticated STOMP/SockJS protocols.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Core Framework**: Java 21 & Spring Boot 3.3.2
-- **Database**: PostgreSQL (Relational Database)
-- **Object-Relational Mapping**: Spring Data JPA & Hibernate
-- **Security**: Spring Security & JWT (JSON Web Tokens)
-- **JSON Parser/Signing**: JJWT (`0.11.5`)
-- **Real-Time Communication**: Spring WebSocket, STOMP Broker, SockJS
-- **Documentation**: OpenAPI Spec / Swagger UI (`springdoc-openapi`)
-- **Build Tool**: Maven
-- **Lombok**: Metadata generation & clean boilerplate reduction
+### Backend
+* **Core Framework**: Java 21 & Spring Boot 3.3.2
+* **Database Access**: Spring Data JPA & Hibernate 6
+* **Security & Authentication**: Spring Security & stateless JWT tokens (JJWT `0.11.5`)
+* **Real-Time Communication**: Spring Message Broker, STOMP Protocol, SockJS
+* **API Documentation**: OpenAPI Spec / Swagger UI (`springdoc-openapi`)
+* **Build Tool**: Maven
+
+### Frontend
+* **Core Framework**: React 18 & Vite
+* **Styling**: Tailwind CSS & PostCSS
+* **HTTP Client**: Axios (configured with auth interceptors)
+* **WebSocket Client**: SockJS-Client & StompJS
+* **Toasts & UI Alerting**: React-Toastify
 
 ---
 
 ## 📂 Project Structure
 
 ```text
-com.talenttrade
-├── config          # Global configurations (Swagger, WebSockets)
-├── controller      # REST Controllers & WebSocket Message Handlers
-├── service         # Business logic layer
-├── repository      # Database persistence interfaces
-├── entity          # JPA Entities (User, Skill, UserSkill, Match, ExchangeRequest, Session, Review, Notification, ChatMessage)
-├── dto             # Request and Response Data Transfer Objects (including standardized ApiResponse wrapper)
-├── security        # JWT Services, security configurations, and filters
-└── exception       # Custom exceptions and Global Exception Handler
+TalentTrade-Skill-Exchange-Platform
+├── .env.example                # Config template for environment variables
+├── docker-compose.yml          # Container configuration for local deployment
+├── Dockerfile                  # Multi-stage Docker build recipe for backend
+├── pom.xml                     # Maven project specification
+├── src                         # Spring Boot Java source directory
+│   └── main/java/com/talenttrade
+│       ├── config              # Swagger & WebSocket configurations
+│       ├── controller          # REST controllers & message handlers
+│       ├── dto                 # Request / Response Data Transfer Objects
+│       ├── entity              # JPA database schema mappings
+│       ├── exception           # Exception definitions & Global Handler
+│       ├── repository          # Database access interfaces
+│       ├── security            # JWT utilities & filters
+│       └── service             # Business logic layer
+└── frontend                    # React SPA source folder
+    ├── Dockerfile              # Multi-stage Docker build recipe for Nginx/React
+    ├── nginx.conf              # SPA route config & local reverse proxy
+    └── src
+        ├── contexts            # Auth and WebSocket state providers
+        └── services            # REST API endpoints connectors
 ```
 
 ---
 
 ## 🗄️ Database Schema
 
-The backend uses PostgreSQL with automatic Hibernate DDL update. The logical schema is structured as follows:
+The backend uses PostgreSQL. The database schema contains the following structure:
 
 ```sql
 -- 1. users Table
@@ -148,92 +206,49 @@ CREATE TABLE chat_messages (
 
 ---
 
-## ✨ Features
+## ⚙️ Environment Variables Dictionary
 
-### 1. Security & Authentication
-- **Secure Auth**: Custom user registration and login endpoints utilizing **Spring Security** and stateless **JWT Tokens**.
-- **Role Control**: Endpoints secured under `ROLE_USER` hierarchy using filter interceptors.
+The application reads configuration from environment variables. An example template is provided in [.env.example](file:///.env.example).
 
-### 2. Skill Management
-- **Universal Skill Registry**: Directory containing categorized skills (e.g., Programming, Language, Design).
-- **User Profile Association**: Users attach skills they wish to teach or learn, along with levels (`BEGINNER` to `EXPERT`).
-
-### 3. Mutual Matching Engine
-- **Reciprocal Matches**: Finds users who teach what you want to learn, and learn what you teach.
-- **Score Calculation**: Automatically calculates matching scores and creates match profiles.
-
-### 4. Exchange Requests
-- **Structured Handshakes**: Users dispatch requests to match candidates. Duplicates are strictly prevented.
-- **State Flow**: Requests transition from `PENDING` to `ACCEPTED` or `REJECTED`.
-
-### 5. Session Scheduler
-- **Meeting Organization**: Accepted requests can generate unique training sessions.
-- **Overlap Conflict Checks**: Interceptor logic checks user calendar constraints to prevent conflicting session overlaps.
-
-### 6. Ratings & Feedback
-- **Quality Control**: Completed sessions can be reviewed and rated (1-5 stars).
-- **Security Check**: Self-reviews and duplicate reviews are strictly barred.
-
-### 7. Real-Time Chat (WebSocket)
-- **STOMP Broker**: Instant message routing via WebSocket channel subscriptions.
-- **Subscription Route**: `/topic/chat/{conversationId}` (where `conversationId` is `minUserId_maxUserId`).
-- **Connection Handshake**: `/ws` authenticated securely using JWT tokens in STOMP headers.
-- **Communication Rules**: Users can only exchange messages if they have an `ACCEPTED` exchange request OR an active scheduled session.
-
-### 8. API Standardization, Pagination & Sorting
-- **Unified Schema**: Every controller returns the standardized `ApiResponse<T>` structure:
-```json
-{
-  "success": true,
-  "message": "Operation successful",
-  "data": {},
-  "timestamp": "2026-06-26T10:39:47"
-}
-```
-- **Sorting Support**: Listing resources (Users, Skills, Matches, Requests, Sessions, Reviews, Notifications, Chat History) support parameters: `page`, `size`, `sortBy`, and `direction`.
+| Variable Name | Purpose / Description | Scope | Local Default Value |
+| :--- | :--- | :--- | :--- |
+| `SPRING_PROFILES_ACTIVE` | Set spring environment context profile (e.g. `dev`, `prod`). | Backend | `dev` |
+| `SPRING_PORT` | Port where backend Tomcat binds to listen. | Backend | `8080` |
+| `SPRING_DATASOURCE_URL` | JDBC URL for connection to the PostgreSQL database cluster. | Backend | `jdbc:postgresql://localhost:5432/talenttrade` |
+| `SPRING_DATASOURCE_USERNAME`| PostgreSQL Database user name credentials. | Backend | `postgres` |
+| `SPRING_DATASOURCE_PASSWORD`| PostgreSQL Database user password. | Backend | `postgres_password` |
+| `SPRING_JPA_DDL_AUTO` | Database Schema strategy (`update`, `validate`, `create-drop`).| Backend | `update` |
+| `JWT_SECRET` | Secret key used to sign and verify JSON Web Tokens (Hex 256-bit).| Backend | `404E6352...` |
+| `JWT_EXPIRATION` | Validity duration of signed token headers (milliseconds). | Backend | `86400000` (24h) |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated list of allowed origins. | Backend | `http://localhost:5173,http://127.0.0.1:5173` |
+| `VITE_API_BASE_URL` | Base API target URL for frontend HTTP requests. | Frontend | `/api` |
+| `VITE_WS_URL` | Target endpoint for SockJS WebSocket handshake negotiations. | Frontend | `/ws` |
 
 ---
 
 ## 🚀 How to Run
 
-You can run this application either using **Docker Compose (Recommended)** or **Locally**.
+### Method 1: Docker Compose (Local Environment)
+Ensures a single-command setup mapping database, API, and UI containers.
 
-### Method 1: Docker Compose (Recommended)
-This approach launches the complete backend and frontend stack (Spring Boot application, PostgreSQL database, and React/Vite frontend) in isolated containers with zero manual configuration. 
+1. Create a `.env` file in the root workspace folder copying values from `.env.example`.
+2. Execute the build and run command:
+   ```bash
+   docker compose up --build
+   ```
+3. Open browser to **`http://localhost`** (port 80) to interact with the application.
 
-#### Prerequisites
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
-
-#### One-Command Startup
-Clone the repository, navigate to the root directory, and execute:
-```bash
-docker compose up --build
-```
-This single command will:
-1. Create an isolated Docker bridge network.
-2. Build the multi-stage Spring Boot backend Docker image.
-3. Start the PostgreSQL database container and check its health.
-4. Build the multi-stage React/Vite frontend Docker image.
-5. Create the `talenttrade` database automatically.
-6. Boot the Spring Boot application and auto-generate/update database tables using Hibernate DDL.
-7. Launch the Nginx web server, exposing the user interface at **`http://localhost`** (port 80).
-8. Automatically proxy REST and WebSocket traffic from the frontend to the backend container.
-
----
-
-### Method 2: Manual Local Running
-If you prefer running the application outside of Docker:
-1. **PostgreSQL Setup**: Ensure PostgreSQL is running on port `5432` and create a database:
+### Method 2: Manual Local Boot
+1. **PostgreSQL Setup**: Ensure local database server is active, and create the schema:
    ```sql
    CREATE DATABASE talenttrade;
    ```
-2. **Settings**: Modify database credentials in `src/main/resources/application.properties` or set them as environment variables.
-3. **Run Backend**:
+2. **Setup environment variables** (or copy to `.env`).
+3. **Launch Backend**:
    ```bash
-   mvn clean compile
-   mvn spring-boot:run
+   mvn clean compile spring-boot:run
    ```
-4. **Run Frontend**:
+4. **Launch Frontend**:
    ```bash
    cd frontend
    npm install
@@ -242,81 +257,70 @@ If you prefer running the application outside of Docker:
 
 ---
 
-## 🐳 Docker Architecture & Design Decisions
+## ☁️ Production Deployment Instructions
 
-### 1. Multi-Stage Dockerfiles
-We utilize **multi-stage builds** for both the backend and frontend to optimize performance, file size, and security:
-* **Spring Boot (Backend)**: 
-  * **Build Stage**: Uses a full Maven JDK image (`maven:3.9.6-eclipse-temurin-21-alpine`) to package the application. Dependencies are cached using layer caching via `mvn dependency:go-offline`.
-  * **Runtime Stage**: Uses a lightweight JRE Alpine image (`eclipse-temurin:21-jre-alpine`) executing under a custom non-root system user (`spring`) for security.
-* **React/Vite (Frontend)**:
-  * **Build Stage**: Uses a Node Alpine image (`node:20-alpine`) to install dependencies and run production compilation (`npm run build`).
-  * **Runtime Stage**: Uses a lightweight Nginx web server (`nginx:1.25-alpine`) to serve the static assets.
+### 1. Database Deployment (Neon PostgreSQL)
+Neon offers a serverless PostgreSQL instance with auto-scaling capabilities.
 
-### 2. Nginx Web Server & Reverse Proxying
-In the frontend container, Nginx acts as:
-* **Static File Server**: Delivers React assets and utilizes `try_files` to redirect non-file requests to `index.html`, allowing React Router client-side routing to work seamlessly.
-* **Reverse Proxy**: Proxies `/api` traffic internally to the Java backend container (`http://app:8080/api`) and manages the `/ws` route to pass WebSocket connections with appropriate upgrade headers. This eliminates Cross-Origin Resource Sharing (CORS) issues in production!
+1. Navigate to [Neon Console](https://neon.tech/) and sign in.
+2. Click **Create Project**, name it `talenttrade`, and select the preferred region.
+3. Locate the **Connection String** panel under Dashboard.
+4. Copy the connection parameters.
+   * **Direct URL** (e.g. `postgres://[user]:[password]@[host]/talenttrade?sslmode=require`)
+5. Translate this to the JDBC string for Spring:
+   * **URL**: `jdbc:postgresql://[host]:5432/talenttrade?sslmode=require`
+   * **Username**: `[user]`
+   * **Password**: `[password]`
 
-### 3. Isolated Container Networking
-All services reside within a custom Docker bridge network (`talenttrade-network`):
-* The backend connects to the database via `jdbc:postgresql://db:5432/talenttrade` (using the container hostname `db`).
-* The frontend Nginx container proxies API calls internally to `http://app:8080` (using the container hostname `app`).
-* Port mapping exposes port `80` (HTTP) for the frontend container and `8080` (API/Swagger) for the backend container on the host machine.
+### 2. Backend Deployment (Railway)
+Railway is the preferred platform for deploying Spring Boot Docker microservices.
 
-### 4. Database Persistence
-We define a named Docker volume (`postgres_data`) mapped to `/var/lib/postgresql/data` in the database container. This ensures that even if you tear down, rebuild, or restart the containers, your user accounts, matching tables, and chat histories persist safely on your host machine.
+1. Log into [Railway Console](https://railway.app/).
+2. Create a **New Project** and choose **Deploy from GitHub repo**.
+3. Select your `TalentTrade-Skill-Exchange-Platform` repository.
+4. Open the **Variables** configuration panel for the service and load variables:
+   * `SPRING_PROFILES_ACTIVE` = `prod`
+   * `SPRING_DATASOURCE_URL` = `jdbc:postgresql://<neon-hostname>:5432/talenttrade?sslmode=require`
+   * `SPRING_DATASOURCE_USERNAME` = `<neon-username>`
+   * `SPRING_DATASOURCE_PASSWORD` = `<neon-password>`
+   * `SPRING_JPA_DDL_AUTO` = `update` *(Set to `update` for first run to auto-generate schema, then update to `validate` for subsequent runs)*
+   * `JWT_SECRET` = `<generate-secure-hex-256-bit-key>`
+   * `CORS_ALLOWED_ORIGINS` = `https://<your-vercel-domain>.vercel.app`
+5. Under service **Settings**, add a **Domain** mapping. Note your backend URL (e.g., `https://talenttrade-backend.up.railway.app`).
+6. Railway automatically reads the root `Dockerfile`, executes the Maven multi-stage package, and boots the runtime instance.
+7. Verification: Navigate to `https://<backend-domain>/swagger-ui.html` to confirm success.
 
-### 5. Container Startup Synchronization (Health Checks)
-To avoid race conditions where Spring Boot starts up and attempts to connect before PostgreSQL has initialized, we configured a container health check:
-* The database uses `pg_isready` to verify readiness.
-* The Spring Boot app service is marked with `depends_on` containing the `condition: service_healthy` modifier.
-* The application container startup is blocked until the PostgreSQL health check reports green.
+### 3. Frontend Deployment (Vercel)
+Vercel is optimal for hosting static React Vite SPAs.
 
-### 6. Seamless Database and Schema Creation
-* **Database Creation**: The official PostgreSQL image automatically spawns a database with the name specified in the `POSTGRES_DB` environment variable on startup.
-* **Schema Generation**: Hibernate is configured via `spring.jpa.hibernate.ddl-auto=update` in `application.properties`. When Spring Boot boots up, Hibernate scans the `@Entity` classes (such as `User`, `ExchangeRequest`, `ChatMessage`, etc.) and automatically creates or updates the tables inside the database.
+1. Log into [Vercel](https://vercel.com/) and click **Add New** -> **Project**.
+2. Import your GitHub repository.
+3. Select the directory framework as **Vite** and target directory as `./frontend` (under Project settings root).
+4. Configure **Environment Variables**:
+   * `VITE_API_BASE_URL` = `https://<your-railway-backend-domain>.up.railway.app/api`
+   * `VITE_WS_URL` = `https://<your-railway-backend-domain>.up.railway.app/ws`
+5. Click **Deploy**. Vercel compiles static production assets into `dist/` and hosts them globally.
+6. Configure **SPA Fallback Routing**:
+   To prevent `404 Not Found` errors when refreshing React pages, create a `vercel.json` file inside the `frontend` folder containing:
+   ```json
+   {
+     "rewrites": [
+       { "source": "/(.*)", "destination": "/index.html" }
+     ]
+   }
+   ```
 
 ---
 
-## ⚙️ Docker Lifecycle Command Catalog
+## 🐳 Docker Architecture & Command Catalog
 
-Below are all the commands needed to manage the container lifecycles:
+For detailed information about container parameters, Docker multi-stage pipeline configuration, Nginx setup, database persistence, and CLI lifecycle logs, refer to the [Docker Lifecycle Command Catalog](#🐳-docker-lifecycle-command-catalog) table in the local guides.
 
 | Operation | Command |
 | :--- | :--- |
-| **Build & Start Containers** (Foreground) | `docker compose up --build` |
-| **Start Containers** (Background / Detached) | `docker compose up -d` |
-| **Stop Containers** (Gracefully) | `docker compose stop` |
-| **Restart Containers** | `docker compose restart` |
-| **View Combined Container Logs** | `docker compose logs -f` |
-| **View Backend App Logs Only** | `docker compose logs -f app` |
-| **View Frontend Container Logs Only** | `docker compose logs -f frontend` |
-| **Access PostgreSQL Command Line (CLI)** | `docker exec -it talenttrade-db psql -U postgres -d talenttrade` |
-| **Stop and Remove Containers/Networks** | `docker compose down` |
-| **Remove Containers, Networks & Volumes** | `docker compose down -v` |
-
----
-
-## 📖 Swagger API Documentation
-
-Once containers are active, access the interactive API docs at:
-👉 **[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)** or via the Nginx proxy at **`http://localhost/swagger-ui.html`**.
-
-### Testing Secured Endpoints
-1. Call `POST /api/auth/login` (or create a user via `POST /api/auth/register` first).
-2. Copy the returned `token` from the JSON response.
-3. Click the green **Authorize** padlock button at the top right of the Swagger UI page.
-4. Input `Bearer <your_copied_token>` and submit.
-5. All authorized endpoints are now testable directly in the browser!
-
----
-
-## 🛠️ Future Enhancements
-- **Google OAuth**: Integrate SSO login for user onboarding.
-- **Google Calendar & Meet**: Auto-schedule meetings and generate Google Meet invites.
-- **AI Skill Recommendations**: Use LLMs to match users based on bio semantic analysis.
-- **Redis Cache**: Speed up dashboards and matching engines with cache eviction.
-- **CI/CD Integration**: Add GitHub Actions workflow to build, test, and push the Docker images to a container registry.
-
-
+| **Build & Run Containers** | `docker compose up --build` |
+| **Stop Containers** | `docker compose stop` |
+| **Restart Services** | `docker compose restart` |
+| **View Service Logs** | `docker compose logs -f` |
+| **Access PostgreSQL DB Client** | `docker exec -it talenttrade-db psql -U postgres -d talenttrade` |
+| **Wipe Containers & Volumes** | `docker compose down -v` |

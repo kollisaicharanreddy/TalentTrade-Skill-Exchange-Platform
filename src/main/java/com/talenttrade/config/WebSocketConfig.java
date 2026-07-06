@@ -3,6 +3,7 @@ package com.talenttrade.config;
 import com.talenttrade.security.CustomUserDetailsService;
 import com.talenttrade.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -30,16 +31,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
 
+    @Value("${app.cors.allowed-origins:*}")
+    private String allowedOrigins;
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        String[] origins = allowedOrigins != null ? allowedOrigins.split(",") : new String[]{"*"};
+
         // Fallback-enabled SockJS endpoint
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(origins)
                 .withSockJS();
         
         // Standard WebSocket endpoint
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns(origins);
     }
 
     @Override

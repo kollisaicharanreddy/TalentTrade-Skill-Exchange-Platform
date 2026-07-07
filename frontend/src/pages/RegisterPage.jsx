@@ -164,6 +164,30 @@ export const RegisterPage = () => {
             Register Account
           </Button>
 
+          {/* OR Divider */}
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-zinc-200"></div>
+            <span className="flex-shrink mx-4 text-zinc-400 text-xs font-semibold uppercase tracking-wider">Or continue with</span>
+            <div className="flex-grow border-t border-zinc-200"></div>
+          </div>
+
+          {/* Google Login Action */}
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full font-bold flex items-center justify-center space-x-2 border-zinc-200 hover:bg-zinc-50"
+            onClick={() => {
+              const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+              const rootUrl = apiUrl.replace(/\/api$/, '');
+              window.location.href = `${rootUrl}/oauth2/authorization/google`;
+            }}
+          >
+            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.35,11.1H12v2.7h5.38C16.88,15.5,15.11,16.8,12,16.8c-3.14,0-5.7-2.56-5.7-5.7s2.56-5.7,5.7-5.7c1.4,0,2.68,0.52,3.68,1.38 l2.02-2.02C16.1,3.28,14.18,2.7,12,2.7C6.86,2.7,2.7,6.86,2.7,12s4.16,9.3,9.3,9.3c5.38,0,9-3.78,9-9.3 C21,11.72,21.35,11.1,21.35,11.1z" fill="#4285F4"/>
+            </svg>
+            <span>Google</span>
+          </Button>
+
         </form>
 
         {/* Footer redirection link */}

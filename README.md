@@ -324,3 +324,104 @@ For detailed information about container parameters, Docker multi-stage pipeline
 | **View Service Logs** | `docker compose logs -f` |
 | **Access PostgreSQL DB Client** | `docker exec -it talenttrade-db psql -U postgres -d talenttrade` |
 | **Wipe Containers & Volumes** | `docker compose down -v` |
+
+---
+
+## 🔐 Google OAuth2 Setup Guide
+
+To enable Google OAuth2 authentication in TalentTrade, you must configure a project on Google Cloud Console:
+
+1. **Create a Google Cloud Project**:
+   - Visit [Google Cloud Console](https://console.cloud.google.com/).
+   - Click the project dropdown and select **New Project**. Name it `TalentTrade`.
+
+2. **Configure OAuth Consent Screen**:
+   - Navigate to **APIs & Services** > **OAuth consent screen**.
+   - Select **External** and click **Create**.
+   - Fill in the application information (App name: `TalentTrade`, Support email, Developer contact email).
+   - Under **Scopes**, add `.../auth/userinfo.email` and `.../auth/userinfo.profile`.
+   - Add your test user emails to the **Test users** section.
+
+3. **Create Credentials**:
+   - Navigate to **APIs & Services** > **Credentials**.
+   - Click **Create Credentials** > **OAuth client ID**.
+   - Choose **Web application** as application type.
+   - Add **Authorized JavaScript origins**:
+     - `http://localhost:8080` (Backend API)
+     - `http://localhost:5173` (Frontend Local)
+   - Add **Authorized redirect URIs**:
+     - `http://localhost:8080/login/oauth2/code/google` (Default Spring Security OAuth2 callback redirect)
+     - If deployed, add your backend redirect URL e.g., `https://<backend-domain>/login/oauth2/code/google`
+   - Click **Create** and copy your **Client ID** and **Client Secret**.
+
+---
+
+## 📧 SMTP Configuration Guide
+
+TalentTrade uses Spring Mail for sending registration verification emails. You can configure it via any SMTP provider (Gmail, Mailtrap, AWS SES, etc.):
+
+### Using Mailtrap (Recommended for Development)
+1. Register at [Mailtrap](https://mailtrap.io/).
+2. Under **Inboxes** > **SMTP Settings**, choose **Spring Boot**.
+3. Copy the host, port, username, and password.
+
+### Using Gmail SMTP
+1. Go to your Google Account > **Security**.
+2. Enable **2-Step Verification**.
+3. Go to **App passwords**, create an App password for "Mail", and copy the generated 16-character password.
+4. Set the host to `smtp.gmail.com` and port to `587`.
+
+---
+
+## ⚙️ Required Environment Variables
+
+Add the following properties to your `.env` file or environment configuration:
+
+```env
+# Google OAuth2 Credentials
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Mail SMTP Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+
+# Application Settings
+APP_URL=http://localhost:8080
+```
+
+---
+
+## 🔄 Verification & OAuth2 Authentication Workflow
+
+### Email Verification Flow
+1. **User Registration**: Client hits `POST /api/auth/register`. A new user is created in the database with `enabled = false` and `emailVerified = false`.
+2. **Token Generation**: A unique UUID token is generated, bound to the user, and saved in the database with a 24-hour expiration date.
+3. **Email Dispatched**: An HTML email is compiled using a Thymeleaf template and sent to the user's email address with a link like `${APP_URL}/api/auth/verify?token=XYZ`.
+4. **Verification Call**: User clicks the email link. The client hits `GET /api/auth/verify?token=XYZ`.
+5. **Account Activation**: The token is validated, user fields `enabled` and `emailVerified` are set to `true`, and the token is purged from the database.
+
+### Google OAuth2 Login Flow
+1. **Trigger Login**: Client navigates to `/oauth2/authorization/google`.
+2. **Consent Dialog**: Google presents the consent screen to the user.
+3. **Authorization Code**: Google redirects to `/login/oauth2/code/google` with authorization code.
+4. **User Registration/Login**: 
+   - If user exists by Google email, their `enabled` and `emailVerified` are set to `true`, and they are loaded.
+   - If user doesn't exist, a new passwordless user is created (with a safe default/null password), verified, enabled, and saved.
+5. **JWT Issuance**: `OAuth2AuthenticationSuccessHandler` generates a TalentTrade JWT token.
+6. **Redirect**: Backend redirects user back to Frontend URL (`${app.oauth2.authorized-redirect-uri}?token=JWT_TOKEN`).
+
+---
+
+## 🧪 Testing Steps
+
+1. Run the database container: `docker compose up -d db`.
+2. Provide your SMTP and Google OAuth credentials in `.env`.
+3. Launch backend: `./mvnw spring-boot:run` or via your IDE.
+4. Test Registration: Send a `POST /api/auth/register` request. Check that you receive the verification email.
+5. Test Login before Verification: Attempt to login using the credentials. Confirm you receive a `401 Unauthorized` with "Account is not verified. Please verify your email."
+6. Test Verification: Copy the token from your verification email (or database if testing offline) and make a `GET /api/auth/verify?token=<token>` request.
+7. Test Login after Verification: Attempt to login again. Confirm you get `200 OK` with a valid JWT.
+8. Test Google Login: Open browser to `http://localhost:8080/oauth2/authorization/google`. Complete the Google login flow and verify you redirect back with `token` query param.

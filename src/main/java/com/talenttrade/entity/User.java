@@ -35,8 +35,14 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column
     private String password;
+
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    @Builder.Default
+    private boolean enabled = false;
 
     @Column(length = 1000)
     private String bio;
@@ -78,7 +84,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.enabled;
     }
 
     public String getUsernameValue() {

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify Your Email - TalentTrade</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: #ffffff;
+            padding: 32px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.05em;
+        }
+        .content {
+            padding: 40px 32px;
+            color: #374151;
+            line-height: 1.6;
+        }
+        .content h2 {
+            margin-top: 0;
+            color: #111827;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .button-container {
+            text-align: center;
+            margin: 32px 0;
+        }
+        .btn-verify {
+            background-color: #4f46e5;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-block;
+            transition: background-color 0.2s;
+        }
+        .footer {
+            background-color: #f9fafb;
+            padding: 24px 32px;
+            text-align: center;
+            font-size: 14px;
+            color: #6b7280;
+            border-top: 1px solid #f3f4f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TalentTrade</h1>
+        </div>
+        <div class="content">
+            <h2>Welcome, <span th:text="${name}">User</span>!</h2>
+            <p>Thank you for signing up for TalentTrade, the premium skill-exchange platform. To activate your account and start trading skills, please click the button below to verify your email address:</p>
+            <div class="button-container">
+                <a class="btn-verify" th:href="${verificationUrl}">Verify Account</a>
+            </div>
+            <p>Please note that this verification link will expire in 24 hours. If the button above doesn't work, you can copy and paste the following link into your web browser:</p>
+            <p style="word-break: break-all; color: #4f46e5;"><span th:text="${verificationUrl}">http://localhost:8080/api/auth/verify?token=example</span></p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 TalentTrade. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

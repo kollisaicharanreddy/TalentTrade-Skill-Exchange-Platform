@@ -4,6 +4,7 @@ import com.talenttrade.dto.ApiResponse;
 import com.talenttrade.dto.LoginRequest;
 import com.talenttrade.dto.LoginResponse;
 import com.talenttrade.dto.RegisterRequest;
+import com.talenttrade.dto.ResendVerificationRequest;
 import com.talenttrade.dto.UserResponse;
 import com.talenttrade.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,24 +13,26 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication", description = "Endpoints for user registration and login")
+@Tag(name = "Authentication", description = "Endpoints for user registration, login, and email verification")
 public class AuthController {
 
     private final AuthService authService;
 
     @PostMapping("/register")
-    @Operation(summary = "Register a new user", description = "Creates a new user profile with encrypted password and checks for email uniqueness.")
+    @Operation(summary = "Register a new user", description = "Creates a new user profile with encrypted password, checks for email uniqueness, and sends a verification email.")
     public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
         UserResponse response = authService.register(request);
-        return new ResponseEntity<>(ApiResponse.success(response, "User registered successfully"), HttpStatus.CREATED);
+        return new ResponseEntity<>(ApiResponse.success(response, "User registered successfully. Please check your email to verify your account."), HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
@@ -37,5 +40,19 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success(response, "Login successful"));
+    }
+
+    @GetMapping("/verify")
+    @Operation(summary = "Verify user account", description = "Activates user account using the token sent via registration/resend verification email.")
+    public ResponseEntity<ApiResponse<Void>> verify(@RequestParam String token) {
+        authService.verifyToken(token);
+        return ResponseEntity.ok(ApiResponse.success(null, "Account verified successfully"));
+    }
+
+    @PostMapping("/resend-verification")
+    @Operation(summary = "Resend verification email", description = "Generates and sends a new verification token link to the user email.")
+    public ResponseEntity<ApiResponse<Void>> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        authService.resendVerificationToken(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success(null, "Verification email sent successfully"));
     }
 }

@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Compass, Key, Mail, AlertCircle } from 'lucide-react';
+import { Compass, Key, Mail, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { authService } from '../services/auth.service';
 
 export const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resending, setResending] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -22,6 +25,7 @@ export const LoginPage = () => {
 
   const onSubmit = async (data) => {
     setLoading(true);
+    setUnverifiedEmail('');
     const result = await login(data.email, data.password);
     setLoading(false);
 
@@ -30,7 +34,34 @@ export const LoginPage = () => {
       navigate('/dashboard');
     } else {
       toast.error(result.message || 'Login failed');
+      if (result.message && (result.message.toLowerCase().includes('verify') || result.message.toLowerCase().includes('verified'))) {
+        setUnverifiedEmail(data.email);
+      }
     }
+  };
+
+  const handleResendVerification = async () => {
+    if (!unverifiedEmail) return;
+    setResending(true);
+    try {
+      const response = await authService.resendVerification(unverifiedEmail);
+      if (response && response.success) {
+        toast.success('Verification email resent successfully! Check your inbox.');
+        setUnverifiedEmail('');
+      } else {
+        toast.error(response.message || 'Failed to resend verification email.');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to resend verification email.');
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+    const rootUrl = apiUrl.replace(/\/api$/, '');
+    window.location.href = `${rootUrl}/oauth2/authorization/google`;
   };
 
   const expiredSession = searchParams.get('expired');
@@ -54,6 +85,28 @@ export const LoginPage = () => {
           <div className="flex items-center space-x-2 p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-md">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>Your session has expired. Please log in again.</span>
+          </div>
+        )}
+
+        {/* Unverified Account Warning */}
+        {unverifiedEmail && (
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-md space-y-2">
+            <div className="flex items-center space-x-2 text-xs font-semibold">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>Verify Your Email</span>
+            </div>
+            <p className="text-[11px] text-rose-700">You need to confirm your email before logging in. Click below to resend the activation link.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleResendVerification}
+              loading={resending}
+              className="w-full text-rose-800 border-rose-200 hover:bg-rose-100/50 flex items-center justify-center space-x-1 text-xs font-bold"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              <span>Resend Verification Link</span>
+            </Button>
           </div>
         )}
 
@@ -115,6 +168,26 @@ export const LoginPage = () => {
             loading={loading}
           >
             Log In
+          </Button>
+
+          {/* OR Divider */}
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-zinc-200"></div>
+            <span className="flex-shrink mx-4 text-zinc-400 text-xs font-semibold uppercase tracking-wider">Or continue with</span>
+            <div className="flex-grow border-t border-zinc-200"></div>
+          </div>
+
+          {/* Google Login Action */}
+          <Button 
+            type="button" 
+            variant="outline" 
+            className="w-full font-bold flex items-center justify-center space-x-2 border-zinc-200 hover:bg-zinc-50"
+            onClick={handleGoogleLogin}
+          >
+            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M21.35,11.1H12v2.7h5.38C16.88,15.5,15.11,16.8,12,16.8c-3.14,0-5.7-2.56-5.7-5.7s2.56-5.7,5.7-5.7c1.4,0,2.68,0.52,3.68,1.38 l2.02-2.02C16.1,3.28,14.18,2.7,12,2.7C6.86,2.7,2.7,6.86,2.7,12s4.16,9.3,9.3,9.3c5.38,0,9-3.78,9-9.3 C21,11.72,21.35,11.1,21.35,11.1z" fill="#4285F4"/>
+            </svg>
+            <span>Google</span>
           </Button>
 
         </form>

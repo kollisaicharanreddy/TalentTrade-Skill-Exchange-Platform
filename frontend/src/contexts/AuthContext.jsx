@@ -89,6 +89,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithToken = (jwtToken, userData) => {
+    localStorage.setItem('token', jwtToken);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setToken(jwtToken);
+    setUser(userData);
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -103,6 +110,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    loginWithToken,
     updateProfile,
     logout,
   };

@@ -28,5 +28,13 @@ export const authService = {
     return api.get('/users/search', {
       params: { skill, page, size, sortBy, direction }
     });
+  },
+
+  async verifyEmail(token) {
+    return api.get('/auth/verify', { params: { token } });
+  },
+
+  async resendVerification(email) {
+    return api.post('/auth/resend-verification', { email });
   }
 };

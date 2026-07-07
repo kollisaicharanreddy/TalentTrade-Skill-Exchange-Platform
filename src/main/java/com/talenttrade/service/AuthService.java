@@ -80,8 +80,12 @@ public class AuthService {
         verificationTokenRepository.save(verificationToken);
 
         // Send email
-        String verificationUrl = appUrl + "/api/auth/verify?token=" + token;
-        emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getFullName(), verificationUrl);
+        try {
+            String verificationUrl = appUrl + "/api/auth/verify?token=" + token;
+            emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getFullName(), verificationUrl);
+        } catch (Exception e) {
+            log.error("Failed to send verification email on registration. User created as unverified.", e);
+        }
 
         return mapToUserResponse(savedUser);
     }
@@ -166,8 +170,12 @@ public class AuthService {
 
         verificationTokenRepository.save(verificationToken);
 
-        String verificationUrl = appUrl + "/api/auth/verify?token=" + token;
-        emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verificationUrl);
+        try {
+            String verificationUrl = appUrl + "/api/auth/verify?token=" + token;
+            emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verificationUrl);
+        } catch (Exception e) {
+            log.error("Failed to resend verification email. User will need to obtain the token manually or try again.", e);
+        }
         log.info("Verification email resent successfully to {}", email);
     }
 

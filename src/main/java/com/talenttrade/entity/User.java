@@ -39,10 +39,10 @@ public class User implements UserDetails {
     private String password;
 
     @Builder.Default
-    private boolean emailVerified = false;
+    private Boolean emailVerified = false;
 
     @Builder.Default
-    private boolean enabled = false;
+    private Boolean enabled = false;
 
     @Column(length = 1000)
     private String bio;
@@ -84,7 +84,11 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return this.enabled;
+        return this.enabled != null && this.enabled;
+    }
+
+    public boolean isEmailVerified() {
+        return this.emailVerified != null && this.emailVerified;
     }
 
     public String getUsernameValue() {

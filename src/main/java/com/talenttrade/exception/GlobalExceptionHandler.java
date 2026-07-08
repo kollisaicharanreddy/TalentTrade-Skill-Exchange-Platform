@@ -178,6 +178,26 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(InvalidOAuthProviderException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidOAuthProvider(InvalidOAuthProviderException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .success(false)
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(DuplicateOAuthAccountException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateOAuthAccount(DuplicateOAuthAccountException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .success(false)
+                .message(ex.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex) {
         ErrorResponse error = ErrorResponse.builder()

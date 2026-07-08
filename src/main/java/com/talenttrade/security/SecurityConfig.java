@@ -56,6 +56,7 @@ public class SecurityConfig {
                                 "/ws/**",
                                 "/ws"
                         ).permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -68,6 +69,16 @@ public class SecurityConfig {
                                 .userService(customOAuth2UserService)
                         )
                         .successHandler(oauth2SuccessHandler)
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/api/auth/logout")
+                        .clearAuthentication(true)
+                        .invalidateHttpSession(true)
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_OK);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"success\":true,\"message\":\"Logged out successfully\"}");
+                        })
                 );
 
         return http.build();

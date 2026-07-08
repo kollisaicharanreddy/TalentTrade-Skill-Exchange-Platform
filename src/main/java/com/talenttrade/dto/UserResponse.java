@@ -18,6 +18,10 @@ public class UserResponse {
     private String email;
     private String bio;
     private String location;
+    private String role;
+    private String provider;
+    private Boolean emailVerified;
+    private Boolean enabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

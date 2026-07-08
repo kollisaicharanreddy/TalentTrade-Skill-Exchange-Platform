@@ -13,7 +13,12 @@ import {
   LogOut, 
   Menu, 
   X,
-  Compass
+  Compass,
+  ShieldAlert,
+  Users,
+  Wrench,
+  BarChart3,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNotifications } from '../hooks/useNotifications';
@@ -52,6 +57,16 @@ export const DashboardLayout = ({ children }) => {
     },
     { name: 'My Profile', path: '/profile', icon: User },
   ];
+
+  if (user?.role === 'ADMIN') {
+    menuItems.push(
+      { name: 'Admin Dashboard', path: '/admin', icon: ShieldAlert },
+      { name: 'Manage Users', path: '/admin/users', icon: Users },
+      { name: 'Manage Skills', path: '/admin/skills', icon: Wrench },
+      { name: 'Platform Analytics', path: '/admin/analytics', icon: BarChart3 },
+      { name: 'System Statistics', path: '/admin/health', icon: Activity }
+    );
+  }
 
   const handleLogout = () => {
     logout();

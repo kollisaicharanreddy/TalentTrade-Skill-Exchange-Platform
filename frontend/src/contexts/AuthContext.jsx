@@ -96,11 +96,17 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.warn("Backend logout failed:", error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setToken(null);
+      setUser(null);
+    }
   };
 
   const value = {

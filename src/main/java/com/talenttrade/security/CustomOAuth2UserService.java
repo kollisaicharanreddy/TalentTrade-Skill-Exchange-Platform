@@ -1,6 +1,8 @@
 package com.talenttrade.security;
 
 import com.talenttrade.entity.User;
+import com.talenttrade.entity.Role;
+import com.talenttrade.entity.AuthProvider;
 import com.talenttrade.exception.OAuthAuthenticationException;
 import com.talenttrade.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -66,6 +68,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .password(passwordEncoder.encode(UUID.randomUUID().toString())) // satisfying existing NOT NULL constraint
                     .emailVerified(true) // Auto verified from google
                     .enabled(true)
+                    .role(Role.USER)
+                    .provider(AuthProvider.GOOGLE)
                     .build();
             user = userRepository.save(user);
             log.info("Registered new Google OAuth2 user: {}", email);
@@ -78,6 +82,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             }
             if (!user.isEnabled()) {
                 user.setEnabled(true);
+                updated = true;
+            }
+            if (user.getProvider() == null || user.getProvider() == AuthProvider.LOCAL) {
+                user.setProvider(AuthProvider.GOOGLE); // Upgrade / Link to Google provider
+                updated = true;
+            }
+            if (user.getRole() == null) {
+                user.setRole(Role.USER);
                 updated = true;
             }
             if (updated) {

@@ -34,10 +34,16 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        return generateToken(new java.util.HashMap<>(), userDetails);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
+        if (userDetails instanceof com.talenttrade.entity.User) {
+            com.talenttrade.entity.User user = (com.talenttrade.entity.User) userDetails;
+            extraClaims.put("userId", user.getId());
+            extraClaims.put("role", user.getRole() != null ? user.getRole().name() : "USER");
+            extraClaims.put("provider", user.getProvider() != null ? user.getProvider().name() : "LOCAL");
+        }
         return buildToken(extraClaims, userDetails, jwtExpiration);
     }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
+import AdminRoute from './AdminRoute';
 import DashboardLayout from '../layouts/DashboardLayout';
 
 // Public pages
@@ -20,6 +21,13 @@ import SessionsPage from '../pages/SessionsPage';
 import ReviewsPage from '../pages/ReviewsPage';
 import NotificationsPage from '../pages/NotificationsPage';
 import ChatPage from '../pages/ChatPage';
+
+// Admin pages
+import AdminDashboardPage from '../pages/AdminDashboardPage';
+import ManageUsersPage from '../pages/ManageUsersPage';
+import ManageSkillsPage from '../pages/ManageSkillsPage';
+import PlatformAnalyticsPage from '../pages/PlatformAnalyticsPage';
+import SystemStatisticsPage from '../pages/SystemStatisticsPage';
 
 // Common error pages
 const NotFoundPage = () => (
@@ -154,6 +162,58 @@ export const AppRoutes = () => {
               <ChatPage />
             </DashboardLayout>
           </ProtectedRoute>
+        }
+      />
+
+      {/* Admin Pages */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <AdminDashboardPage />
+            </DashboardLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/users"
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <ManageUsersPage />
+            </DashboardLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/skills"
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <ManageSkillsPage />
+            </DashboardLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/analytics"
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <PlatformAnalyticsPage />
+            </DashboardLayout>
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/health"
+        element={
+          <AdminRoute>
+            <DashboardLayout>
+              <SystemStatisticsPage />
+            </DashboardLayout>
+          </AdminRoute>
         }
       />
 

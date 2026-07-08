@@ -67,6 +67,10 @@ public class UserService {
                 .email(user.getEmail())
                 .bio(user.getBio())
                 .location(user.getLocation())
+                .role(user.getRole() != null ? user.getRole().name() : null)
+                .provider(user.getProvider() != null ? user.getProvider().name() : null)
+                .emailVerified(user.isEmailVerified())
+                .enabled(user.isEnabled())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

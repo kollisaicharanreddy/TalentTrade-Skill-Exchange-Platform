@@ -44,6 +44,16 @@ public class User implements UserDetails {
     @Builder.Default
     private Boolean enabled = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Role role = Role.USER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private AuthProvider provider = AuthProvider.LOCAL;
+
     @Column(length = 1000)
     private String bio;
 
@@ -59,7 +69,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + (role != null ? role.name() : "USER")));
     }
 
     @Override

@@ -403,25 +403,59 @@ APP_URL=http://localhost:8080
 4. **Verification Call**: User clicks the email link. The client hits `GET /api/auth/verify?token=XYZ`.
 5. **Account Activation**: The token is validated, user fields `enabled` and `emailVerified` are set to `true`, and the token is purged from the database.
 
-### Google OAuth2 Login Flow
+### Google OAuth2 Setup & Flow
+To configure Google Sign-In:
+1. Go to the **Google Cloud Console** -> API & Services -> Credentials.
+2. Create an **OAuth 2.0 Client ID**.
+3. Set Authorized Redirect URIs to:
+   - Development: `http://localhost:8080/login/oauth2/code/google`
+   - Production: `https://<your-backend-url>/login/oauth2/code/google`
+4. Set the authorized javascript origins to your frontend URL.
+5. In your `.env` or application configuration, provide:
+   - `GOOGLE_CLIENT_ID`
+   - `GOOGLE_CLIENT_SECRET`
+   - `OAUTH2_REDIRECT_URI` (default: `http://localhost:5173/oauth2/redirect`)
+
+#### Google OAuth2 Flow:
 1. **Trigger Login**: Client navigates to `/oauth2/authorization/google`.
-2. **Consent Dialog**: Google presents the consent screen to the user.
-3. **Authorization Code**: Google redirects to `/login/oauth2/code/google` with authorization code.
-4. **User Registration/Login**: 
-   - If user exists by Google email, their `enabled` and `emailVerified` are set to `true`, and they are loaded.
-   - If user doesn't exist, a new passwordless user is created (with a safe default/null password), verified, enabled, and saved.
-5. **JWT Issuance**: `OAuth2AuthenticationSuccessHandler` generates a TalentTrade JWT token.
+2. **Consent Dialog**: Google presents the consent screen.
+3. **Authorization Code**: Google redirects to backend endpoint `/login/oauth2/code/google`.
+4. **User Sync**:
+   - If user exists by email, their account is synced/linked (`provider` updated to `GOOGLE`, `enabled` and `emailVerified` set to `true`).
+   - If user does not exist, a new account is automatically created (`provider=GOOGLE`, `role=USER`, `enabled=true`, `emailVerified=true`).
+5. **JWT Issuance**: `OAuth2AuthenticationSuccessHandler` generates the TalentTrade JWT token containing custom claims (`userId`, `role`, `provider`).
 6. **Redirect**: Backend redirects user back to Frontend URL (`${app.oauth2.authorized-redirect-uri}?token=JWT_TOKEN`).
 
 ---
 
-## 🧪 Testing Steps
+## 🔐 Role-Based Access Control (RBAC)
+We enforce granular backend role authorization:
+* **Roles**:
+  * `USER`: Access to normal peer-to-peer activities (Dashboard, Skills Registry, Matches, Requests, Sessions, Reviews, Notifications, Chat Room).
+  * `ADMIN`: Access to all user features plus the administrative endpoints `/api/admin/**` (Summary, Analytics, User Registry Management, Skill Catalog Management, System Health).
+
+* **JWT Custom Claims**:
+  ```json
+  {
+    "sub": "john@gmail.com",
+    "userId": 1,
+    "role": "ADMIN",
+    "provider": "GOOGLE"
+  }
+  ```
+
+* **Backend Protection**:
+  Spring Security intercepts `/api/admin/**` ensuring only clients carrying valid JWTs with `ROLE_ADMIN` authority are granted access (`hasRole('ADMIN')`).
+
+---
+
+## 🧪 Testing Guide
 
 1. Run the database container: `docker compose up -d db`.
 2. Provide your SMTP and Google OAuth credentials in `.env`.
-3. Launch backend: `./mvnw spring-boot:run` or via your IDE.
-4. Test Registration: Send a `POST /api/auth/register` request. Check that you receive the verification email.
-5. Test Login before Verification: Attempt to login using the credentials. Confirm you receive a `401 Unauthorized` with "Account is not verified. Please verify your email."
-6. Test Verification: Copy the token from your verification email (or database if testing offline) and make a `GET /api/auth/verify?token=<token>` request.
-7. Test Login after Verification: Attempt to login again. Confirm you get `200 OK` with a valid JWT.
-8. Test Google Login: Open browser to `http://localhost:8080/oauth2/authorization/google`. Complete the Google login flow and verify you redirect back with `token` query param.
+3. Launch backend: `./mvnw spring-boot:run` or run via IDE.
+4. **Local Login**: Call `POST /api/auth/login`. If the account's provider is `GOOGLE`, the API will return `400 Bad Request` with `InvalidOAuthProviderException` message, forcing the user to log in via Google.
+5. **Google OAuth2**: Navigate to `http://localhost:8080/oauth2/authorization/google`. Check that the success handler redirects to the frontend with the JWT query param, and that the JWT contains `userId`, `role`, and `provider` claims.
+6. **Authorization Guard Check**: Login as a user with `role = USER`. Try to fetch `/api/admin/summary`. The API will respond with `403 Forbidden`. Promote the user to `ADMIN` in the database or via `/api/admin/users/{id}/role` (if logged in as another admin), and ensure access is now granted.
+7. **Frontend Views**: Access the client web app. Check that users with `USER` role do not see administrative options in the sidebar, and are redirected to `/unauthorized` if they try to access `/admin` paths manually. Verify that admin users see the Admin Dashboard, Manage Users, Manage Skills, Platform Analytics, and System Statistics views.
+8. **Logout Verification**: Trigger "Logout Session". Verify that the client sends a `POST /api/auth/logout` request, clearing the security context on the backend, and removing tokens/user keys from `localStorage`.

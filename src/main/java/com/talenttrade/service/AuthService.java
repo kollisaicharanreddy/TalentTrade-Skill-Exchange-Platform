@@ -6,11 +6,14 @@ import com.talenttrade.dto.RegisterRequest;
 import com.talenttrade.dto.UserResponse;
 import com.talenttrade.entity.User;
 import com.talenttrade.entity.VerificationToken;
+import com.talenttrade.entity.Role;
+import com.talenttrade.entity.AuthProvider;
 import com.talenttrade.exception.AccountNotVerifiedException;
 import com.talenttrade.exception.DuplicateResourceException;
 import com.talenttrade.exception.InvalidRequestException;
 import com.talenttrade.exception.ResourceNotFoundException;
 import com.talenttrade.exception.VerificationTokenExpiredException;
+import com.talenttrade.exception.InvalidOAuthProviderException;
 import com.talenttrade.repository.UserRepository;
 import com.talenttrade.repository.VerificationTokenRepository;
 import com.talenttrade.security.JwtService;
@@ -63,6 +66,8 @@ public class AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .emailVerified(false)
                 .enabled(false)
+                .role(Role.USER)
+                .provider(AuthProvider.LOCAL)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -93,6 +98,13 @@ public class AuthService {
     public LoginResponse login(LoginRequest request) {
         log.info("Attempting to login user with email: {}", request.getEmail());
 
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new org.springframework.security.authentication.BadCredentialsException("Invalid email or password"));
+
+        if (user.getProvider() == AuthProvider.GOOGLE) {
+            throw new InvalidOAuthProviderException("This email is registered using Google OAuth. Please log in with Google.");
+        }
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -105,11 +117,7 @@ public class AuthService {
             throw new AccountNotVerifiedException("Account is not verified. Please verify your email.");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> {
-                    log.error("User not found after successful authentication check for email: {}", request.getEmail());
-                    return new UsernameNotFoundException("User not found with email: " + request.getEmail());
-                });
+
 
         String jwtToken = jwtService.generateToken(user);
         log.info("Login successful for user with email: {}", request.getEmail());
@@ -187,6 +195,10 @@ public class AuthService {
                 .email(user.getEmail())
                 .bio(user.getBio())
                 .location(user.getLocation())
+                .role(user.getRole() != null ? user.getRole().name() : null)
+                .provider(user.getProvider() != null ? user.getProvider().name() : null)
+                .emailVerified(user.isEmailVerified())
+                .enabled(user.isEnabled())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

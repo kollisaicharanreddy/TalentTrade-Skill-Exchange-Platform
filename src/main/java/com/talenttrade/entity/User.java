@@ -45,14 +45,22 @@ public class User implements UserDetails {
     private Boolean enabled = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     @Builder.Default
     private Role role = Role.USER;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     @Builder.Default
     private AuthProvider provider = AuthProvider.LOCAL;
+
+    public Role getRole() {
+        return this.role != null ? this.role : Role.USER;
+    }
+
+    public AuthProvider getProvider() {
+        return this.provider != null ? this.provider : AuthProvider.LOCAL;
+    }
 
     @Column(length = 1000)
     private String bio;

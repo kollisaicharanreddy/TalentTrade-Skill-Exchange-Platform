@@ -86,7 +86,7 @@ public class AuthService {
 
         // Send email
         try {
-            String verificationUrl = appUrl + "/api/auth/verify?token=" + token;
+            String verificationUrl = appUrl + "/verify?token=" + token;
             emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getFullName(), verificationUrl);
         } catch (Exception e) {
             log.error("Failed to send verification email on registration. User created as unverified.", e);
@@ -165,21 +165,19 @@ public class AuthService {
             throw new InvalidRequestException("Account is already verified");
         }
 
-        // Delete old token if exists
-        verificationTokenRepository.findByUser(user).ifPresent(verificationTokenRepository::delete);
+        // Find or create verification token to avoid unique constraint violation on user_id
+        VerificationToken verificationToken = verificationTokenRepository.findByUser(user)
+                .orElseGet(() -> VerificationToken.builder().user(user).build());
 
         String token = UUID.randomUUID().toString();
-        VerificationToken verificationToken = VerificationToken.builder()
-                .token(token)
-                .user(user)
-                .createdAt(LocalDateTime.now())
-                .expiryDate(LocalDateTime.now().plusHours(24))
-                .build();
+        verificationToken.setToken(token);
+        verificationToken.setCreatedAt(LocalDateTime.now());
+        verificationToken.setExpiryDate(LocalDateTime.now().plusHours(24));
 
         verificationTokenRepository.save(verificationToken);
 
         try {
-            String verificationUrl = appUrl + "/api/auth/verify?token=" + token;
+            String verificationUrl = appUrl + "/verify?token=" + token;
             emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verificationUrl);
         } catch (Exception e) {
             log.error("Failed to resend verification email. User will need to obtain the token manually or try again.", e);

@@ -51,6 +51,12 @@ services:
       SPRING_JPA_DDL_AUTO: ${SPRING_JPA_DDL_AUTO:-update}
       # Ensure Spring Boot logging is colorized inside terminal logs
       SPRING_OUTPUT_ANSI_ENABLED: ALWAYS
+      # Mail SMTP Configuration
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-2525}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      APP_URL: ${APP_URL:-http://localhost}
     depends_on:
       db:
         # Wait until the PostgreSQL database container health check passes

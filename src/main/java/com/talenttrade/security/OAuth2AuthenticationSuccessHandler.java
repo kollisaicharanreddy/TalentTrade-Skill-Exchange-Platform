@@ -18,7 +18,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     private final JwtService jwtService;
 
-    @Value("${app.oauth2.authorized-redirect-uri:http://localhost:5173/oauth2/redirect}")
+    @Value("${app.oauth2.authorized-redirect-uri:http://localhost/oauth2/redirect}")
     private String authorizedRedirectUri;
 
     @Override

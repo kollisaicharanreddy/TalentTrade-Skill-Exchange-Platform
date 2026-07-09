@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { Compass, Key, Mail, AlertCircle, RefreshCw } from 'lucide-react';
+import { Compass, Key, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -13,8 +13,6 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
-  const [resending, setResending] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
@@ -25,7 +23,6 @@ export const LoginPage = () => {
 
   const onSubmit = async (data) => {
     setLoading(true);
-    setUnverifiedEmail('');
     const result = await login(data.email, data.password);
     setLoading(false);
 
@@ -34,27 +31,6 @@ export const LoginPage = () => {
       navigate('/dashboard');
     } else {
       toast.error(result.message || 'Login failed');
-      if (result.message && (result.message.toLowerCase().includes('verify') || result.message.toLowerCase().includes('verified'))) {
-        setUnverifiedEmail(data.email);
-      }
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!unverifiedEmail) return;
-    setResending(true);
-    try {
-      const response = await authService.resendVerification(unverifiedEmail);
-      if (response && response.success) {
-        toast.success('Verification email resent successfully! Check your inbox.');
-        setUnverifiedEmail('');
-      } else {
-        toast.error(response.message || 'Failed to resend verification email.');
-      }
-    } catch (err) {
-      toast.error(err.message || 'Failed to resend verification email.');
-    } finally {
-      setResending(false);
     }
   };
 
@@ -76,7 +52,7 @@ export const LoginPage = () => {
             <Compass className="h-8 w-8 text-zinc-900 stroke-[2.5]" />
             <span className="font-black text-2xl tracking-tight text-zinc-900">TalentTrade</span>
           </Link>
-          <h2 className="text-xl font-bold text-zinc-850 mt-4">Welcome Back</h2>
+          <h2 className="text-xl font-bold text-zinc-855 mt-4">Welcome Back</h2>
           <p className="text-sm text-zinc-500">Access your skill exchange space</p>
         </div>
 
@@ -85,28 +61,6 @@ export const LoginPage = () => {
           <div className="flex items-center space-x-2 p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-md">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span>Your session has expired. Please log in again.</span>
-          </div>
-        )}
-
-        {/* Unverified Account Warning */}
-        {unverifiedEmail && (
-          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-md space-y-2">
-            <div className="flex items-center space-x-2 text-xs font-semibold">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>Verify Your Email</span>
-            </div>
-            <p className="text-[11px] text-rose-700">You need to confirm your email before logging in. Click below to resend the activation link.</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleResendVerification}
-              loading={resending}
-              className="w-full text-rose-800 border-rose-200 hover:bg-rose-100/50 flex items-center justify-center space-x-1 text-xs font-bold"
-            >
-              <RefreshCw className="h-3 w-3 mr-1" />
-              <span>Resend Verification Link</span>
-            </Button>
           </div>
         )}
 

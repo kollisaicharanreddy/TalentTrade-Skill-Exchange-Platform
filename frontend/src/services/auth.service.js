@@ -30,14 +30,6 @@ export const authService = {
     });
   },
 
-  async verifyEmail(token) {
-    return api.get('/auth/verify', { params: { token } });
-  },
-
-  async resendVerification(email) {
-    return api.post('/auth/resend-verification', { email });
-  },
-
   async logout() {
     return api.post('/auth/logout');
   }

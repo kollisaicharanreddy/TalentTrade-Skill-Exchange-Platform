@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -41,6 +40,7 @@ public class JwtService {
         if (userDetails instanceof com.talenttrade.entity.User) {
             com.talenttrade.entity.User user = (com.talenttrade.entity.User) userDetails;
             extraClaims.put("userId", user.getId());
+            extraClaims.put("email", user.getEmail());
             extraClaims.put("role", user.getRole() != null ? user.getRole().name() : "USER");
             extraClaims.put("provider", user.getProvider() != null ? user.getProvider().name() : "LOCAL");
         }
@@ -54,8 +54,7 @@ public class JwtService {
     private String buildToken(
             Map<String, Object> extraClaims,
             UserDetails userDetails,
-            long expiration
-    ) {
+            long expiration) {
         return Jwts
                 .builder()
                 .setClaims(extraClaims)

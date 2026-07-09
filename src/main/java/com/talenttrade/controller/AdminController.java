@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
 @Tag(name = "Admin Platform Management", description = "Admin dashboard statistics, users registry controls, and system health status checks.")
 public class AdminController {
 

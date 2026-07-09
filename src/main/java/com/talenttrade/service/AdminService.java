@@ -193,31 +193,50 @@ public class AdminService {
         return userRepository.searchAndFilterUsers(query, role, provider, enabled);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public User setUserStatus(Long userId, boolean enabled) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = auth != null ? auth.getName() : "SYSTEM";
+        
         user.setEnabled(enabled);
-        log.info("Admin updated user {} status: enabled={}", user.getEmail(), enabled);
+        log.info("[AUDIT] Timestamp: {}, Admin Email: {}, Action: User Status Update, Target User: {}, Status: {}", 
+                LocalDateTime.now(), adminEmail, user.getEmail(), enabled ? "ACTIVATED" : "DEACTIVATED");
         return userRepository.save(user);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public User setUserRole(Long userId, String roleStr) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        Role oldRole = user.getRole();
         Role role = Role.valueOf(roleStr.toUpperCase());
         user.setRole(role);
-        log.info("Admin updated user {} role to: {}", user.getEmail(), role);
+        
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = auth != null ? auth.getName() : "SYSTEM";
+        
+        log.info("[AUDIT] Timestamp: {}, Admin Email: {}, Action: Role Change, Target User: {}, Old Role: {}, New Role: {}", 
+                LocalDateTime.now(), adminEmail, user.getEmail(), oldRole, role);
         return userRepository.save(user);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        String adminEmail = auth != null ? auth.getName() : "SYSTEM";
+        
         userRepository.delete(user);
-        log.info("Admin deleted user {}", user.getEmail());
+        log.info("[AUDIT] Timestamp: {}, Admin Email: {}, Action: Delete User, Target User: {}", 
+                LocalDateTime.now(), adminEmail, user.getEmail());
     }
 
     @Transactional(readOnly = true)
@@ -225,6 +244,7 @@ public class AdminService {
         return skillRepository.findAll();
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Skill addSkill(Skill skill) {
         if (skillRepository.existsByNameIgnoreCase(skill.getName())) {
@@ -234,6 +254,7 @@ public class AdminService {
         return skillRepository.save(skill);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void deleteSkill(Long skillId) {
         Skill skill = skillRepository.findById(skillId)

@@ -16,11 +16,45 @@ import java.util.List;
 public class DataInitializer implements CommandLineRunner {
 
     private final SkillRepository skillRepository;
+    private final com.talenttrade.repository.UserRepository userRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @org.springframework.beans.factory.annotation.Value("${admin.email:charan@gmail.com}")
+    private String adminEmail;
 
     @Override
     public void run(String... args) {
         log.info("Checking database for default popular skills seeding...");
         seedSkills();
+        bootstrapAdminUser();
+    }
+
+    private void bootstrapAdminUser() {
+        if (adminEmail == null || adminEmail.trim().isEmpty()) {
+            return;
+        }
+        if (!userRepository.existsByEmail(adminEmail)) {
+            String defaultUsername = adminEmail.split("@")[0];
+            com.talenttrade.entity.User admin = com.talenttrade.entity.User.builder()
+                    .fullName("Default Administrator")
+                    .username(defaultUsername)
+                    .email(adminEmail)
+                    .password(passwordEncoder.encode("AdminPass123!"))
+                    .emailVerified(true)
+                    .enabled(true)
+                    .role(com.talenttrade.entity.Role.ADMIN)
+                    .provider(com.talenttrade.entity.AuthProvider.LOCAL)
+                    .build();
+            userRepository.save(admin);
+            log.info("[AUDIT] Bootstrapped default administrator account: {} with username: {}", adminEmail, defaultUsername);
+        } else {
+            com.talenttrade.entity.User admin = userRepository.findByEmail(adminEmail).orElse(null);
+            if (admin != null && admin.getRole() != com.talenttrade.entity.Role.ADMIN) {
+                admin.setRole(com.talenttrade.entity.Role.ADMIN);
+                userRepository.save(admin);
+                log.info("[AUDIT] Automatically upgraded existing account matching ADMIN_EMAIL to ADMIN: {}", adminEmail);
+            }
+        }
     }
 
     private void seedSkills() {

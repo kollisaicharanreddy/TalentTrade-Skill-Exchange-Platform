@@ -5,30 +5,19 @@ import com.talenttrade.dto.LoginResponse;
 import com.talenttrade.dto.RegisterRequest;
 import com.talenttrade.dto.UserResponse;
 import com.talenttrade.entity.User;
-import com.talenttrade.entity.VerificationToken;
 import com.talenttrade.entity.Role;
 import com.talenttrade.entity.AuthProvider;
-import com.talenttrade.exception.AccountNotVerifiedException;
 import com.talenttrade.exception.DuplicateResourceException;
-import com.talenttrade.exception.InvalidRequestException;
-import com.talenttrade.exception.ResourceNotFoundException;
-import com.talenttrade.exception.VerificationTokenExpiredException;
-import com.talenttrade.exception.InvalidOAuthProviderException;
 import com.talenttrade.repository.UserRepository;
-import com.talenttrade.repository.VerificationTokenRepository;
 import com.talenttrade.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -39,11 +28,9 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final VerificationTokenRepository verificationTokenRepository;
-    private final EmailService emailService;
 
-    @Value("${app.url:http://localhost:8080}")
-    private String appUrl;
+    @Value("${admin.email:charan@gmail.com}")
+    private String adminEmail;
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
@@ -59,38 +46,21 @@ public class AuthService {
             throw new DuplicateResourceException("Username already exists");
         }
 
+        Role assignedRole = (adminEmail != null && adminEmail.equalsIgnoreCase(request.getEmail())) ? Role.ADMIN : Role.USER;
+
         User user = User.builder()
                 .fullName(request.getFullName())
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .emailVerified(false)
-                .enabled(false)
-                .role(Role.USER)
+                .emailVerified(true) // Auto-verified: per day 1 requirements local login continues without verification
+                .enabled(true)      // Auto-enabled: bypass verification constraints
+                .role(assignedRole)
                 .provider(AuthProvider.LOCAL)
                 .build();
 
         User savedUser = userRepository.save(user);
-        log.info("User registered successfully with ID: {}, email: {}", savedUser.getId(), savedUser.getEmail());
-
-        // Generate verification token
-        String token = UUID.randomUUID().toString();
-        VerificationToken verificationToken = VerificationToken.builder()
-                .token(token)
-                .user(savedUser)
-                .createdAt(LocalDateTime.now())
-                .expiryDate(LocalDateTime.now().plusHours(24))
-                .build();
-        
-        verificationTokenRepository.save(verificationToken);
-
-        // Send email
-        try {
-            String verificationUrl = appUrl + "/verify?token=" + token;
-            emailService.sendVerificationEmail(savedUser.getEmail(), savedUser.getFullName(), verificationUrl);
-        } catch (Exception e) {
-            log.error("Failed to send verification email on registration. User created as unverified.", e);
-        }
+        log.info("User registered successfully with ID: {}, email: {}, role: {}", savedUser.getId(), savedUser.getEmail(), assignedRole);
 
         return mapToUserResponse(savedUser);
     }
@@ -101,8 +71,24 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new org.springframework.security.authentication.BadCredentialsException("Invalid email or password"));
 
-        if (user.getProvider() == AuthProvider.GOOGLE) {
-            throw new InvalidOAuthProviderException("This email is registered using Google OAuth. Please log in with Google.");
+        // If email matches ADMIN_EMAIL, automatically promote them to ADMIN
+        boolean updated = false;
+        if (adminEmail != null && adminEmail.equalsIgnoreCase(user.getEmail()) && user.getRole() != Role.ADMIN) {
+            user.setRole(Role.ADMIN);
+            updated = true;
+        }
+
+        // If registered using Google OAuth, allow login but update provider to LOCAL or link it.
+        // Wait, the requirement says "Support LOCAL Authentication, GOOGLE Authentication. Both must coexist."
+        // "If email exists: Login existing account. If email does not exist: Create new account. Generate JWT. Redirect."
+        // So we can permit coexisting login under the same email.
+        if (user.getProvider() == null) {
+            user.setProvider(AuthProvider.LOCAL);
+            updated = true;
+        }
+
+        if (updated) {
+            user = userRepository.save(user);
         }
 
         try {
@@ -113,11 +99,10 @@ public class AuthService {
                     )
             );
         } catch (org.springframework.security.authentication.DisabledException e) {
-            log.warn("Login failed - account not verified for email: {}", request.getEmail());
-            throw new AccountNotVerifiedException("Account is not verified. Please verify your email.");
+            // Local users are bypass-verified so they should be enabled. If they are disabled, we might have deactivated them.
+            log.warn("Login failed - account disabled for email: {}", request.getEmail());
+            throw e;
         }
-
-
 
         String jwtToken = jwtService.generateToken(user);
         log.info("Login successful for user with email: {}", request.getEmail());
@@ -126,63 +111,6 @@ public class AuthService {
                 .token(jwtToken)
                 .user(mapToUserResponse(user))
                 .build();
-    }
-
-    @Transactional
-    public void verifyToken(String token) {
-        log.info("Attempting to verify token: {}", token);
-        VerificationToken verificationToken = verificationTokenRepository.findByToken(token)
-                .orElseThrow(() -> new InvalidRequestException("Invalid verification token"));
-
-        if (verificationToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            log.warn("Token expired: {}", token);
-            throw new VerificationTokenExpiredException("Verification link has expired");
-        }
-
-        User user = verificationToken.getUser();
-        if (user.isEmailVerified()) {
-            log.warn("User already verified: {}", user.getEmail());
-            throw new InvalidRequestException("Account is already verified");
-        }
-
-        user.setEmailVerified(true);
-        user.setEnabled(true);
-        userRepository.save(user);
-
-        // Delete token to prevent reuse
-        verificationTokenRepository.delete(verificationToken);
-        log.info("Account verified successfully for user: {}", user.getEmail());
-    }
-
-    @Transactional
-    public void resendVerificationToken(String email) {
-        log.info("Request to resend verification token for email: {}", email);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-
-        if (user.isEmailVerified()) {
-            log.warn("User already verified, no need to resend: {}", email);
-            throw new InvalidRequestException("Account is already verified");
-        }
-
-        // Find or create verification token to avoid unique constraint violation on user_id
-        VerificationToken verificationToken = verificationTokenRepository.findByUser(user)
-                .orElseGet(() -> VerificationToken.builder().user(user).build());
-
-        String token = UUID.randomUUID().toString();
-        verificationToken.setToken(token);
-        verificationToken.setCreatedAt(LocalDateTime.now());
-        verificationToken.setExpiryDate(LocalDateTime.now().plusHours(24));
-
-        verificationTokenRepository.save(verificationToken);
-
-        try {
-            String verificationUrl = appUrl + "/verify?token=" + token;
-            emailService.sendVerificationEmail(user.getEmail(), user.getFullName(), verificationUrl);
-        } catch (Exception e) {
-            log.error("Failed to resend verification email. User will need to obtain the token manually or try again.", e);
-        }
-        log.info("Verification email resent successfully to {}", email);
     }
 
     private UserResponse mapToUserResponse(User user) {

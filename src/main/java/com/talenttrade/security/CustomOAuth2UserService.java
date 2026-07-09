@@ -25,6 +25,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @org.springframework.beans.factory.annotation.Value("${admin.email:charan@gmail.com}")
+    private String adminEmail;
+
     @Override
     @Transactional
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -51,6 +54,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             }
         }
 
+        // Determine correct role based on ADMIN_EMAIL environment variable bootstrap
+        Role assignedRole = (adminEmail != null && adminEmail.equalsIgnoreCase(email)) ? Role.ADMIN : Role.USER;
+
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
             // Automatically create a new user if they do not exist
@@ -68,11 +74,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .password(passwordEncoder.encode(UUID.randomUUID().toString())) // satisfying existing NOT NULL constraint
                     .emailVerified(true) // Auto verified from google
                     .enabled(true)
-                    .role(Role.USER)
+                    .role(assignedRole)
                     .provider(AuthProvider.GOOGLE)
                     .build();
             user = userRepository.save(user);
-            log.info("Registered new Google OAuth2 user: {}", email);
+            log.info("Registered new Google OAuth2 user: {} with Role: {}", email, assignedRole);
         } else {
             // If the user already exists, update and verify/enable them
             boolean updated = false;
@@ -88,14 +94,18 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 user.setProvider(AuthProvider.GOOGLE); // Upgrade / Link to Google provider
                 updated = true;
             }
-            if (user.getRole() == null) {
+            // Always ensure the bootstrapping administrator role is updated if matching configured ADMIN_EMAIL
+            if (adminEmail != null && adminEmail.equalsIgnoreCase(email) && user.getRole() != Role.ADMIN) {
+                user.setRole(Role.ADMIN);
+                updated = true;
+            } else if (user.getRole() == null) {
                 user.setRole(Role.USER);
                 updated = true;
             }
             if (updated) {
                 user = userRepository.save(user);
             }
-            log.info("Logged in existing user via Google OAuth2: {}", email);
+            log.info("Logged in existing user via Google OAuth2: {} with Role: {}", email, user.getRole());
         }
 
         return new CustomOAuth2User(user, oAuth2User.getAttributes());

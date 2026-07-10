@@ -449,13 +449,46 @@ We enforce granular backend role authorization:
 
 ---
 
-## 🧪 Testing Guide
+## 🧪 Testing Foundation
 
-1. Run the database container: `docker compose up -d db`.
-2. Provide your SMTP and Google OAuth credentials in `.env`.
-3. Launch backend: `./mvnw spring-boot:run` or run via IDE.
-4. **Local Login**: Call `POST /api/auth/login`. If the account's provider is `GOOGLE`, the API will return `400 Bad Request` with `InvalidOAuthProviderException` message, forcing the user to log in via Google.
-5. **Google OAuth2**: Navigate to `http://localhost:8080/oauth2/authorization/google`. Check that the success handler redirects to the frontend with the JWT query param, and that the JWT contains `userId`, `role`, and `provider` claims.
-6. **Authorization Guard Check**: Login as a user with `role = USER`. Try to fetch `/api/admin/summary`. The API will respond with `403 Forbidden`. Promote the user to `ADMIN` in the database or via `/api/admin/users/{id}/role` (if logged in as another admin), and ensure access is now granted.
-7. **Frontend Views**: Access the client web app. Check that users with `USER` role do not see administrative options in the sidebar, and are redirected to `/unauthorized` if they try to access `/admin` paths manually. Verify that admin users see the Admin Dashboard, Manage Users, Manage Skills, Platform Analytics, and System Statistics views.
-8. **Logout Verification**: Trigger "Logout Session". Verify that the client sends a `POST /api/auth/logout` request, clearing the security context on the backend, and removing tokens/user keys from `localStorage`.
+A professional testing foundation has been established for TalentTrade using **JUnit 5**, **Mockito**, and **Spring Boot Test**, utilizing an in-memory **H2 database** configuration for isolation.
+
+### Testing Architecture & Structure
+All test classes are organized following Spring Boot best practices in `src/test/java/com/talenttrade/`:
+- **Base Configurations**:
+  - `BaseIntegrationTest.java`: Abstract parent configuring the Spring application context (`@SpringBootTest`) and database transaction boundaries.
+  - `application-test.properties`: Configures test-profile settings, in-memory H2 DB instance, and dummy auth configs.
+- **Reusable Utilities**:
+  - `TestDataFactory.java`: Reusable mock builder functions for users, skills, sessions, and request objects.
+  - `JWTTestHelper.java`: Utility to generate JWT tokens for secure authentication testing.
+- **Unit Tests (`service/` & `security/`)**:
+  - Mock repositories and external dependencies using Mockito.
+  - Comprehensive coverage of happy paths, validation constraints, and exception handling for all core services (`AuthService`, `CustomOAuth2UserService`, `UserService`, `SkillService`, `MatchService`, `ExchangeRequestService`, `SessionService`, `AdminService`).
+- **Integration Tests (`integration/`)**:
+  - Validates full end-to-end user workflows using simulated application contexts.
+  - Workflow coverage includes user signup-to-login, skill management, matching engine execution, request lifecycles, and administrator bootstrap configurations.
+
+---
+
+### How to Run Tests
+
+#### Option 1: Run via Maven (CLI)
+To clean compile the application and execute all tests:
+```bash
+mvn clean test
+```
+
+#### Option 2: Run via IDE
+- Open the project in IntelliJ IDEA or Eclipse.
+- Right-click the `src/test/java` folder.
+- Select **Run 'All Tests'** or run individual test classes using the IDE test runner plugin.
+
+---
+
+### Future Testing Roadmap
+Future stages of TalentTrade development will introduce:
+1. **MockMvc**: For controller-level API endpoint verification, request validation, serialization, and CORS/CSRF behavior.
+2. **Testcontainers**: To run integration tests against a real dockerized PostgreSQL container instead of H2.
+3. **WireMock**: For stubbing external API dependencies (e.g. Google OAuth user info endpoint simulation).
+4. **AssertJ**: For fluent, human-readable assertion writing.
+5. **JaCoCo**: To analyze and report test suite code coverage metrics.

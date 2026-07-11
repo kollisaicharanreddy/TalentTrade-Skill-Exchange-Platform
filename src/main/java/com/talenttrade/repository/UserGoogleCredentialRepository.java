@@ -8,4 +8,5 @@ import java.util.Optional;
 @Repository
 public interface UserGoogleCredentialRepository extends JpaRepository<UserGoogleCredential, Long> {
     Optional<UserGoogleCredential> findByUserEmail(String email);
+    Optional<UserGoogleCredential> findByUserId(Long userId);
 }

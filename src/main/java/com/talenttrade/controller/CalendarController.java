@@ -79,11 +79,10 @@ public class CalendarController {
                 String refreshToken = (String) body.get("refresh_token");
                 Integer expiresIn = (Integer) body.get("expires_in");
 
-                UserGoogleCredential credential = credentialRepository.findById(user.getId())
+                UserGoogleCredential credential = credentialRepository.findByUserId(user.getId())
                         .orElse(new UserGoogleCredential());
 
                 credential.setUser(user);
-                credential.setUserId(user.getId());
                 credential.setAccessToken(accessToken);
                 if (refreshToken != null) {
                     credential.setRefreshToken(refreshToken);

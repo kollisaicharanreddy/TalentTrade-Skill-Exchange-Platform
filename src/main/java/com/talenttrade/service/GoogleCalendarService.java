@@ -170,7 +170,7 @@ public class GoogleCalendarService implements CalendarService {
     private synchronized String getOrRefreshAccessToken(UserGoogleCredential credential) {
         // If expired or within 1 minute of expiring
         if (credential.getTokenExpiresAt().isBefore(LocalDateTime.now().plusMinutes(1))) {
-            log.info("Google Access Token expired/expiring for user ID: {}. Refreshing...", credential.getUserId());
+            log.info("Google Access Token expired/expiring for user ID: {}. Refreshing...", credential.getUser().getId());
             if (credential.getRefreshToken() == null) {
                 throw new IllegalStateException("Refresh token is missing. User must reconnect calendar.");
             }

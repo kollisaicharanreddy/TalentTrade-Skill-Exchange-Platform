@@ -13,12 +13,11 @@ import java.time.LocalDateTime;
 public class UserGoogleCredential {
 
     @Id
-    @Column(name = "user_id")
-    private Long userId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", unique = true, nullable = false)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private User user;

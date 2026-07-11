@@ -25,6 +25,10 @@ public class SessionResponseDTO {
     private String meetingLink;
     private SessionStatus status;
     private String notes;
+    private String googleEventId;
+    private String calendarProvider;
+    private String meetingStatus;
+    private LocalDateTime lastSynced;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

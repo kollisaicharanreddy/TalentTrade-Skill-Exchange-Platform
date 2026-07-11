@@ -35,6 +35,7 @@ public class SessionService {
     private final ExchangeRequestRepository exchangeRequestRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final CalendarService calendarService;
 
     @Transactional
     public SessionResponseDTO createSession(String schedulerEmail, SessionRequestDTO requestDTO) {
@@ -91,6 +92,11 @@ public class SessionService {
             throw new InvalidSessionStateException("Learner has a scheduling conflict at this date and time");
         }
 
+        String link = requestDTO.getMeetingLink();
+        if (link == null || link.trim().isEmpty()) {
+            link = "https://meet.jit.si/TalentTradeSession-" + request.getId();
+        }
+
         Session session = Session.builder()
                 .exchangeRequest(request)
                 .mentor(mentor)
@@ -98,13 +104,21 @@ public class SessionService {
                 .scheduledDate(requestDTO.getScheduledDate())
                 .startTime(requestDTO.getStartTime())
                 .endTime(requestDTO.getEndTime())
-                .meetingLink(requestDTO.getMeetingLink())
+                .meetingLink(link)
                 .status(SessionStatus.SCHEDULED)
                 .notes(requestDTO.getNotes())
                 .build();
 
         Session savedSession = sessionRepository.save(session);
         log.info("Session created successfully with ID: {}", savedSession.getId());
+
+        // Create calendar event
+        try {
+            savedSession = calendarService.createCalendarEvent(savedSession);
+            savedSession = sessionRepository.save(savedSession);
+        } catch (Exception e) {
+            log.error("Failed to create calendar event for session ID: {}", savedSession.getId(), e);
+        }
 
         // Notify both participants
         notificationService.createNotification(
@@ -165,11 +179,21 @@ public class SessionService {
         session.setScheduledDate(requestDTO.getScheduledDate());
         session.setStartTime(requestDTO.getStartTime());
         session.setEndTime(requestDTO.getEndTime());
-        session.setMeetingLink(requestDTO.getMeetingLink());
+        String link = requestDTO.getMeetingLink();
+        if (link != null && !link.trim().isEmpty()) {
+            session.setMeetingLink(link);
+        }
         session.setNotes(requestDTO.getNotes());
 
         Session updatedSession = sessionRepository.save(session);
         log.info("Session ID: {} updated successfully by user: {}", id, email);
+
+        try {
+            updatedSession = calendarService.updateCalendarEvent(updatedSession);
+            updatedSession = sessionRepository.save(updatedSession);
+        } catch (Exception e) {
+            log.error("Failed to update calendar event for session ID: {}", id, e);
+        }
 
         return mapToResponseDTO(updatedSession);
     }
@@ -212,8 +236,15 @@ public class SessionService {
         }
 
         session.setStatus(SessionStatus.CANCELLED);
+        session.setMeetingStatus("CANCELLED");
         Session savedSession = sessionRepository.save(session);
         log.info("Session ID: {} marked as CANCELLED successfully", id);
+
+        try {
+            calendarService.deleteCalendarEvent(savedSession);
+        } catch (Exception e) {
+            log.error("Failed to cancel calendar event for session ID: {}", id, e);
+        }
 
         // Notify the other participant
         User otherUser = session.getMentor().getEmail().equals(email) ? session.getLearner() : session.getMentor();
@@ -238,6 +269,12 @@ public class SessionService {
 
         if (!session.getMentor().getEmail().equals(email) && !session.getLearner().getEmail().equals(email)) {
             throw new UnauthorizedException("Only session participants can delete a session");
+        }
+
+        try {
+            calendarService.deleteCalendarEvent(session);
+        } catch (Exception e) {
+            log.error("Failed to delete calendar event for session ID: {}", id, e);
         }
 
         sessionRepository.delete(session);
@@ -298,6 +335,10 @@ public class SessionService {
                 .meetingLink(session.getMeetingLink())
                 .status(session.getStatus())
                 .notes(session.getNotes())
+                .googleEventId(session.getGoogleEventId())
+                .calendarProvider(session.getCalendarProvider() != null ? session.getCalendarProvider().name() : null)
+                .meetingStatus(session.getMeetingStatus())
+                .lastSynced(session.getLastSynced())
                 .createdAt(session.getCreatedAt())
                 .updatedAt(session.getUpdatedAt())
                 .build();

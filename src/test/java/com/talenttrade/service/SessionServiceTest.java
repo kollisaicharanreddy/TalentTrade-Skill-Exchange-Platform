@@ -38,6 +38,9 @@ public class SessionServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private CalendarService calendarService;
+
     @InjectMocks
     private SessionService sessionService;
 
@@ -73,6 +76,7 @@ public class SessionServiceTest {
         when(sessionRepository.hasTimeConflict(2L, dto.getScheduledDate(), dto.getStartTime(), dto.getEndTime()))
                 .thenReturn(false);
         when(sessionRepository.save(any(Session.class))).thenReturn(savedSession);
+        when(calendarService.createCalendarEvent(any(Session.class))).thenAnswer(inv -> inv.getArgument(0));
 
         SessionResponseDTO response = sessionService.createSession("mentor@example.com", dto);
 

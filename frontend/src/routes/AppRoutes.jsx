@@ -9,6 +9,7 @@ import LandingPage from '../pages/LandingPage';
 import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
 import OAuth2RedirectHandler from '../pages/OAuth2RedirectHandler';
+import GoogleCallbackPage from '../pages/GoogleCallbackPage';
 
 // Protected pages
 import DashboardPage from '../pages/DashboardPage';
@@ -59,6 +60,7 @@ export const AppRoutes = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/oauth2/redirect" element={<OAuth2RedirectHandler />} />
+      <Route path="/google-callback" element={<GoogleCallbackPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       {/* Protected Pages */}

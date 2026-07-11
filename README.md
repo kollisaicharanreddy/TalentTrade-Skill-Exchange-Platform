@@ -492,3 +492,46 @@ Future stages of TalentTrade development will introduce:
 3. **WireMock**: For stubbing external API dependencies (e.g. Google OAuth user info endpoint simulation).
 4. **AssertJ**: For fluent, human-readable assertion writing.
 5. **JaCoCo**: To analyze and report test suite code coverage metrics.
+
+---
+
+## 📅 Google Calendar & Meet Integration (Stage 4)
+
+TalentTrade now integrates with Google Workspace APIs to automate scheduling, generate Google Meet links, and handle participant invitations without SMTP/mail setups.
+
+### Google OAuth Scopes Required
+1. `https://www.googleapis.com/auth/calendar` - Allows creating, editing, and deleting calendars.
+2. `https://www.googleapis.com/auth/calendar.events` - Allows creating and modifying events on calendars.
+
+### Architecture and Flow
+```mermaid
+sequenceDiagram
+    participant User as User (React Client)
+    participant Spring as TalentTrade Backend
+    participant Google as Google OAuth2 & Calendar API
+
+    User->>Spring: GET /api/calendar/auth-url
+    Spring-->>User: Returns Google OAuth URL (offline access + consent prompt)
+    User->>Google: Redirects to Google Consent Screen
+    Google-->>User: Redirects back to Frontend /google-callback?code=CODE
+    User->>Spring: POST /api/calendar/exchange { code, redirectUri }
+    Spring->>Google: Exchange code for Access Token & Refresh Token
+    Google-->>Spring: Returns tokens
+    Spring->>Spring: Saves tokens in user_google_credentials
+    Spring-->>User: Success response (Connected status)
+
+    User->>Spring: POST /api/sessions (Create Session)
+    Spring->>Spring: Creates local Session in DB
+    Spring->>Spring: Loads Mentor's Google Credentials (refreshing if expired)
+    Spring->>Google: Creates Calendar Event with hangoutsMeet conference data
+    Google-->>Spring: Returns Calendar Event (with Google Meet URI and Event ID)
+    Spring->>Spring: Updates Session with googleEventId and meetingLink
+    Spring-->>User: Returns updated Session Details (with Join Meeting buttons)
+```
+
+### Session Synchronization Rules
+* **Create Session**: Automatically schedules a Google Calendar event, attaches both Mentor and Learner as attendees, generates a Google Meet video conference, and updates the local session with the meeting link.
+* **Update Session**: Updates date, times, and agendas in Google Calendar.
+* **Cancel Session**: Marks the session status as CANCELLED and removes the event from Google Calendar.
+* **Delete Session**: Silently deletes the event from Google Calendar before deleting the session record.
+

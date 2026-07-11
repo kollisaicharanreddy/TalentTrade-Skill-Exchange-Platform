@@ -34,7 +34,6 @@ public class SessionRequestDTO {
     @NotNull(message = "End time is required")
     private LocalTime endTime;
 
-    @NotBlank(message = "Meeting link is required")
     private String meetingLink;
 
     private String notes;

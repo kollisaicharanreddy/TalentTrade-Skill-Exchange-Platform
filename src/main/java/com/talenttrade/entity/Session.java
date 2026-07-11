@@ -54,6 +54,19 @@ public class Session {
     @Column(length = 1000)
     private String notes;
 
+    @Column(name = "google_event_id")
+    private String googleEventId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "calendar_provider")
+    private CalendarProvider calendarProvider;
+
+    @Column(name = "meeting_status")
+    private String meetingStatus;
+
+    @Column(name = "last_synced")
+    private java.time.LocalDateTime lastSynced;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

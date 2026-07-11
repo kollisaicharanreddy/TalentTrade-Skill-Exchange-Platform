@@ -5,6 +5,7 @@ import { sessionsService } from '../services/sessions.service';
 import { requestsService } from '../services/requests.service';
 import { reviewsService } from '../services/reviews.service';
 import { useAuth } from '../hooks/useAuth';
+import { calendarService } from '../services/calendar.service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
@@ -22,6 +23,11 @@ export const SessionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('UPCOMING');
 
+  // Google Calendar integration state
+  const [isCalendarConnected, setIsCalendarConnected] = useState(false);
+  const [isCalendarLoading, setIsCalendarLoading] = useState(true);
+  const [autoCreateMeet, setAutoCreateMeet] = useState(true);
+
   // Schedule modal state
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [selectedReqId, setSelectedReqId] = useState('');
@@ -32,6 +38,42 @@ export const SessionsPage = () => {
   const [schedLink, setSchedLink] = useState('https://meet.jit.si/TalentTradeSession');
   const [schedNotes, setSchedNotes] = useState('');
   const [scheduleLoading, setScheduleLoading] = useState(false);
+
+  const checkCalendarStatus = async () => {
+    try {
+      const res = await calendarService.getStatus();
+      setIsCalendarConnected(res.connected);
+    } catch (error) {
+      console.error("Failed to check calendar status:", error);
+    } finally {
+      setIsCalendarLoading(false);
+    }
+  };
+
+  const handleConnectCalendar = async () => {
+    try {
+      const redirectUri = `${window.location.origin}/google-callback`;
+      const res = await calendarService.getAuthUrl(redirectUri);
+      if (res && res.url) {
+        window.location.href = res.url;
+      }
+    } catch (error) {
+      toast.error("Failed to generate Google connection URL");
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    if (!window.confirm("Are you sure you want to disconnect Google Calendar integration?")) return;
+    try {
+      const res = await calendarService.disconnect();
+      if (res && res.success) {
+        toast.success("Google Calendar disconnected");
+        setIsCalendarConnected(false);
+      }
+    } catch (error) {
+      toast.error("Failed to disconnect calendar");
+    }
+  };
 
   // Review modal state
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -84,11 +126,13 @@ export const SessionsPage = () => {
 
   useEffect(() => {
     fetchAcceptedRequests();
+    checkCalendarStatus();
   }, []);
 
   const handleCreateSession = async (e) => {
     e.preventDefault();
-    if (!selectedReqId || !schedDate || !schedStart || !schedEnd || !schedLink) {
+    const isMeet = autoCreateMeet && isCalendarConnected && teachOption === 'MYSELF';
+    if (!selectedReqId || !schedDate || !schedStart || !schedEnd || (!schedLink && !isMeet)) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -111,7 +155,7 @@ export const SessionsPage = () => {
         scheduledDate: schedDate,
         startTime: `${schedStart}:00`, // Append seconds to match LocalTime format (HH:MM:SS)
         endTime: `${schedEnd}:00`,
-        meetingLink: schedLink,
+        meetingLink: isMeet ? '' : schedLink,
         notes: schedNotes
       };
 
@@ -228,6 +272,39 @@ export const SessionsPage = () => {
         </Button>
       </div>
 
+      {/* Google Calendar Connection Status Banner */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+        <CardContent className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-blue-600 rounded-lg text-white shrink-0">
+              <Calendar className="h-5.5 w-5.5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-zinc-900 text-sm">Google Calendar & Meet Integration</h3>
+              <p className="text-xs text-zinc-500 max-w-lg mt-0.5 leading-relaxed">
+                Link your Google Calendar to automatically generate Google Meet URLs and send out calendar invitations to your exchange partners when scheduling sessions.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {isCalendarLoading ? (
+              <span className="text-xs text-zinc-400 font-medium">Loading connection...</span>
+            ) : isCalendarConnected ? (
+              <>
+                <Badge className="bg-green-50 text-green-700 border-green-150">Connected</Badge>
+                <Button size="sm" variant="outline" onClick={handleDisconnectCalendar} className="text-xs border-red-200 text-red-500 hover:bg-red-50">
+                  Disconnect
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" onClick={handleConnectCalendar} className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white">
+                Connect Google Calendar
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full max-w-md grid-cols-3">
           <TabsTrigger value="UPCOMING">Upcoming</TabsTrigger>
@@ -281,6 +358,13 @@ export const SessionsPage = () => {
                           <p className="text-xs text-zinc-500 italic max-w-xl truncate">
                             Notes: "{s.notes}"
                           </p>
+                        )}
+
+                        {s.googleEventId && (
+                          <div className="flex items-center space-x-1.5 text-xxs text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-semibold max-w-fit mt-1">
+                            <Video className="h-3 w-3 animate-pulse" />
+                            <span>Synced to Google Calendar (Meet link generated & invitations sent via calendar)</span>
+                          </div>
                         )}
                       </div>
 
@@ -459,17 +543,53 @@ export const SessionsPage = () => {
               </div>
             </div>
 
-            {/* Meet link */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Meeting Link</label>
-              <Input
-                type="url"
-                placeholder="https://meet.google.com/..."
-                value={schedLink}
-                onChange={(e) => setSchedLink(e.target.value)}
-                required
-              />
+            {/* Google Meet & Calendar notice */}
+            <div className="p-3 bg-blue-50 border border-blue-150 text-blue-700 rounded-lg text-xs leading-relaxed space-y-1">
+              <div className="font-bold flex items-center space-x-1.5 text-blue-800">
+                <Calendar className="h-4 w-4" />
+                <span>Google Calendar Sync details:</span>
+              </div>
+              <p className="text-zinc-650 text-xxs leading-normal">
+                {isCalendarConnected ? (
+                  teachOption === 'MYSELF' ? (
+                    <span className="text-green-700 font-medium">✓ You are teaching this session and have connected Google Calendar. A Google Meet link will be generated automatically, and invites will be emailed.</span>
+                  ) : (
+                    <span>Note: Since your partner is teaching, Google Calendar sync and Google Meet link generation will only occur if your partner has connected their Google Calendar account.</span>
+                  )
+                ) : (
+                  <span>You have not connected Google Calendar. Fall back to manual meeting links, or close this and click 'Connect Google Calendar' first.</span>
+                )}
+              </p>
             </div>
+
+            {isCalendarConnected && teachOption === 'MYSELF' && (
+              <div className="flex items-center space-x-2 p-2 bg-zinc-50 border border-zinc-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="autoCreateMeet"
+                  checked={autoCreateMeet}
+                  onChange={(e) => setAutoCreateMeet(e.target.checked)}
+                  className="rounded border-zinc-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                />
+                <label htmlFor="autoCreateMeet" className="text-xs font-bold text-zinc-700 cursor-pointer">
+                  Automatically generate Google Meet link & email invites
+                </label>
+              </div>
+            )}
+
+            {/* Meet link */}
+            {!(isCalendarConnected && teachOption === 'MYSELF' && autoCreateMeet) && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">Meeting Link</label>
+                <Input
+                  type="url"
+                  placeholder="https://meet.google.com/..."
+                  value={schedLink}
+                  onChange={(e) => setSchedLink(e.target.value)}
+                  required={!(isCalendarConnected && teachOption === 'MYSELF' && autoCreateMeet)}
+                />
+              </div>
+            )}
 
             {/* Notes */}
             <div className="space-y-1.5">

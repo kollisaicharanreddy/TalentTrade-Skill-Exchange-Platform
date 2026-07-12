@@ -39,6 +39,9 @@ public class GoogleCalendarService implements CalendarService {
     @Value("${spring.security.oauth2.client.registration.google.client-secret}")
     private String clientSecret;
 
+    @Value("${app.timezone:Asia/Kolkata}")
+    private String appTimezone;
+
     @Override
     public Session createCalendarEvent(Session session) {
         // We synchronize based on the organizer/scheduler credentials.
@@ -212,18 +215,21 @@ public class GoogleCalendarService implements CalendarService {
                         "Learner: " + session.getLearner().getFullName() + "\n" +
                         "Exchange Notes: " + (session.getNotes() != null ? session.getNotes() : "None"));
 
-        // Setup Event times
-        ZoneId zoneId = ZoneId.systemDefault();
+        // Setup Event times using configured App Timezone (e.g. Asia/Kolkata)
+        ZoneId zoneId = ZoneId.of(appTimezone);
         
         LocalDateTime startDateTime = LocalDateTime.of(session.getScheduledDate(), session.getStartTime());
         LocalDateTime endDateTime = LocalDateTime.of(session.getScheduledDate(), session.getEndTime());
 
-        // Convert local date time to DateTime required by Calendar API
-        Date startDate = Date.from(startDateTime.atZone(zoneId).toInstant());
-        Date endDate = Date.from(endDateTime.atZone(zoneId).toInstant());
+        java.time.ZonedDateTime zonedDateTimeStart = startDateTime.atZone(zoneId);
+        java.time.ZonedDateTime zonedDateTimeEnd = endDateTime.atZone(zoneId);
 
-        event.setStart(new EventDateTime().setDateTime(new DateTime(startDate, TimeZone.getDefault())));
-        event.setEnd(new EventDateTime().setDateTime(new DateTime(endDate, TimeZone.getDefault())));
+        event.setStart(new EventDateTime()
+                .setDateTime(new DateTime(Date.from(zonedDateTimeStart.toInstant())))
+                .setTimeZone(appTimezone));
+        event.setEnd(new EventDateTime()
+                .setDateTime(new DateTime(Date.from(zonedDateTimeEnd.toInstant())))
+                .setTimeZone(appTimezone));
 
         // Setup Attendees
         List<EventAttendee> attendees = new ArrayList<>();

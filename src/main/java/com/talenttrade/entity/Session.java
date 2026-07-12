@@ -23,8 +23,8 @@ public class Session {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "exchange_request_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "exchange_request_id", nullable = false)
     private ExchangeRequest exchangeRequest;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

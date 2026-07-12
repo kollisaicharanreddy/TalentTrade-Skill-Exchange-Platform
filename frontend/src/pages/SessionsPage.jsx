@@ -465,17 +465,12 @@ export const SessionsPage = () => {
 
           <form onSubmit={handleCreateSession} className="space-y-4 py-2">
             
-            {/* Reciprocal coordination warning info */}
+            {/* Multi-Session coordination info */}
             <div className="p-3 bg-zinc-50 border border-zinc-200 text-zinc-650 rounded-lg text-xxs leading-relaxed space-y-1">
-              <span className="font-bold text-zinc-800 block">🔄 Reciprocal 100% Match Scheduling:</span>
+              <span className="font-bold text-zinc-800 block">🔄 Multi-Session Scheduling Supported:</span>
               <p>
-                To schedule a second/reciprocal session under the same handshake:
+                You can now schedule multiple exchange sessions under a single accepted request handshake (e.g., coordinate separate slots for both teaching and learning reciprocal sessions).
               </p>
-              <ul className="list-disc pl-4 space-y-0.5 mt-1 font-medium">
-                <li>Complete your first session (e.g., you teaching your skill).</li>
-                <li>Go to the <strong>Completed/All</strong> tab and <strong>Delete</strong> the completed session card from your logs.</li>
-                <li>This clears the active session slot, allowing you to schedule the reverse teaching session immediately under the same partner!</li>
-              </ul>
             </div>
 
             {/* Accepted Partner selector */}

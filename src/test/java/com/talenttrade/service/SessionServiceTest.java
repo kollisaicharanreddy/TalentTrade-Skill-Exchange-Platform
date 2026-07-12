@@ -67,7 +67,6 @@ public class SessionServiceTest {
         Session savedSession = TestDataFactory.createSession(1L, request, mentor, learner, SessionStatus.SCHEDULED);
 
         when(exchangeRequestRepository.findById(1L)).thenReturn(Optional.of(request));
-        when(sessionRepository.existsByExchangeRequestId(1L)).thenReturn(false);
         when(userRepository.findById(1L)).thenReturn(Optional.of(mentor));
         when(userRepository.findById(2L)).thenReturn(Optional.of(learner));
 
@@ -129,7 +128,6 @@ public class SessionServiceTest {
                 .build();
 
         when(exchangeRequestRepository.findById(1L)).thenReturn(Optional.of(request));
-        when(sessionRepository.existsByExchangeRequestId(1L)).thenReturn(false);
         when(userRepository.findById(1L)).thenReturn(Optional.of(mentor));
         when(userRepository.findById(2L)).thenReturn(Optional.of(learner));
 

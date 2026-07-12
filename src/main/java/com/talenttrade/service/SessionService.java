@@ -49,11 +49,6 @@ public class SessionService {
             throw new InvalidSessionStateException("Session can only be scheduled for accepted exchange requests");
         }
 
-        // Enforce 1-to-1 relationship between ExchangeRequest and Session
-        if (sessionRepository.existsByExchangeRequestId(request.getId())) {
-            log.warn("Session already scheduled for exchange request ID: {}", request.getId());
-            throw new InvalidSessionStateException("A session has already been scheduled for this exchange request");
-        }
 
         User mentor = userRepository.findById(requestDTO.getMentorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Mentor user not found with ID: " + requestDTO.getMentorId()));

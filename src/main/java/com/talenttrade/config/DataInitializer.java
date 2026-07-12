@@ -18,6 +18,7 @@ public class DataInitializer implements CommandLineRunner {
     private final SkillRepository skillRepository;
     private final com.talenttrade.repository.UserRepository userRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @org.springframework.beans.factory.annotation.Value("${admin.email:saicharanreddykolli@gmail.com}")
     private String adminEmail;
@@ -25,6 +26,15 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         log.info("Checking database for default popular skills seeding...");
+        
+        // Dynamically drop the unique constraint on sessions.exchange_request_id if it exists
+        try {
+            jdbcTemplate.execute("ALTER TABLE sessions DROP CONSTRAINT IF EXISTS uk13ec8kruq3g90idtmk6pjy94d");
+            log.info("Successfully checked and dropped unique constraint uk13ec8kruq3g90idtmk6pjy94d to support multiple sessions.");
+        } catch (Exception e) {
+            log.warn("Could not drop unique constraint on sessions: {}", e.getMessage());
+        }
+
         seedSkills();
         bootstrapAdminUser();
     }

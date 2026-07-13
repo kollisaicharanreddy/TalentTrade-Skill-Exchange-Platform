@@ -1,9 +1,11 @@
 # TalentTrade - Skill Exchange Platform
 
-![Build Status](https://img.shields.io/badge/Build-passing-brightgreen)
+[![CI Build Status](https://github.com/kollisaicharanreddy/TalentTrade-Skill-Exchange-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/kollisaicharanreddy/TalentTrade-Skill-Exchange-Platform/actions/workflows/ci.yml)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Java Version](https://img.shields.io/badge/Java-21-orange)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.2-green)
+![React](https://img.shields.io/badge/React-18-blue)
+![Docker](https://img.shields.io/badge/Docker-Enabled-blue)
 ![Database](https://img.shields.io/badge/PostgreSQL-Neon-blue)
 ![Deployment](https://img.shields.io/badge/Deploy-Railway%20%7C%20Vercel-purple)
 ![WebSockets](https://img.shields.io/badge/WebSockets-SockJS-success)
@@ -534,4 +536,63 @@ sequenceDiagram
 * **Update Session**: Updates date, times, and agendas in Google Calendar.
 * **Cancel Session**: Marks the session status as CANCELLED and removes the event from Google Calendar.
 * **Delete Session**: Silently deletes the event from Google Calendar before deleting the session record.
+
+---
+
+## 🚀 Continuous Integration (CI) with GitHub Actions
+
+We implement a production-grade CI pipeline using GitHub Actions to maintain high code quality and prevent build/deployment breaks.
+
+### Pipeline Architecture
+
+Our pipeline is organized into modular jobs that run in parallel where possible, with a unified status gate at the end:
+
+```mermaid
+graph TD
+    Trigger[Push / PR to main/develop] --> backend-ci[Backend Build & Test]
+    Trigger --> frontend-ci[Frontend Build]
+    Trigger --> docker-val[Docker Build Validation]
+    
+    backend-ci --> status-check{CI Status Gate}
+    frontend-ci --> status-check
+    docker-val --> status-check
+```
+
+1. **Backend Build & Test (`backend-ci`)**:
+   - Compiles the Spring Boot project using JDK 21.
+   - Automatically caches Maven dependencies in the GitHub actions runner to accelerate build speeds.
+   - Runs all unit and integration tests (using the in-memory H2 database).
+2. **Frontend Build (`frontend-ci`)**:
+   - Sets up Node.js 20 environment.
+   - Caches `npm` modules (relative to `frontend/package-lock.json`).
+   - Installs dependencies with `npm ci` (clean install).
+   - Generates production-ready compiled assets (`npm run build`).
+3. **Docker Build Validation (`docker-validation`)**:
+   - Leverages Docker Buildx to build and verify both Backend and Frontend images (`Dockerfile` files).
+   - Uses GitHub Actions caching (`cache-from` and `cache-to`) for fast incremental image building.
+   - The images are not pushed/deployed at this stage (`push: false`), ensuring only code validation occurs.
+4. **CI Status Gate (`ci-status-check`)**:
+   - Serves as the unified status check. It relies on the completion of the three preceding jobs, serving as a gate for repository branch protection.
+
+---
+
+### How to Monitor & Manage Workflows
+
+#### 1. Viewing Workflow Logs
+1. Navigate to the repository on GitHub.
+2. Click on the **Actions** tab.
+3. Select the latest run of **TalentTrade Continuous Integration** from the list.
+4. Click on any job (e.g., `Backend Build & Test` or `Docker Build Validation`) to view real-time logs, build times, and task details.
+
+#### 2. Troubleshooting Failures
+* **Backend Build Failure**: Check the logs of the `Compile Backend & Run Tests` step to see if any tests failed or if compilation failed due to syntax errors.
+* **Frontend Build Failure**: Review logs under the `Compile & Build Frontend Assets` step. Ensure imports are correct and package installations have no conflicts.
+* **Docker Validation Failure**: Check the logs of the `Validate Backend/Frontend Dockerfile Build` steps to check for invalid configuration commands, missing source directories, or base image changes.
+
+#### 3. Rerunning Workflows
+1. Inside the workflow run page on GitHub, click the **Re-run jobs** button in the top-right corner.
+2. You can choose to:
+   - **Re-run all jobs**: Runs the entire CI pipeline again.
+   - **Re-run failed jobs**: Re-runs only the specific job that failed, keeping the success state of other completed jobs to save runner minutes.
+
 

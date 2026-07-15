@@ -24,6 +24,7 @@ public class DashboardService {
     private final ReviewRepository reviewRepository;
 
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "dashboardStats", key = "#email")
     public DashboardResponseDTO generateDashboard(String email) {
         log.info("Generating dashboard statistics for user: {}", email);
 

@@ -34,6 +34,14 @@ public class UserSkillService {
     private final SkillRepository skillRepository;
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", key = "#email"),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "matchResults", allEntries = true)
+        }
+    )
     public UserSkillResponseDTO addUserSkill(String email, UserSkillRequestDTO request) {
         log.info("Attempting to assign skill ID: {} to user: {} as {}", request.getSkillId(), email, request.getType());
         
@@ -71,6 +79,14 @@ public class UserSkillService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", key = "#email"),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "matchResults", allEntries = true)
+        }
+    )
     public void removeUserSkill(String email, Long userSkillId) {
         log.info("Attempting to remove user skill ID: {} for user: {}", userSkillId, email);
         

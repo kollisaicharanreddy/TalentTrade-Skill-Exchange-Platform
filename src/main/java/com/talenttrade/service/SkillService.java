@@ -20,6 +20,12 @@ public class SkillService {
     private final SkillRepository skillRepository;
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public SkillResponseDTO createSkill(SkillDTO skillDTO) {
         log.info("Attempting to create skill: {}", skillDTO.getName());
         String nameTrimmed = skillDTO.getName().trim();
@@ -58,6 +64,12 @@ public class SkillService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public void deleteSkill(Long id) {
         log.info("Attempting to delete skill with ID: {}", id);
         Skill skill = skillRepository.findById(id)

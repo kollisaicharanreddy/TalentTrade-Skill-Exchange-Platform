@@ -33,6 +33,13 @@ public class ExchangeRequestService {
     private final NotificationService notificationService;
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public ExchangeRequestResponseDTO createRequest(String senderEmail, ExchangeRequestDTO requestDTO) {
         log.info("User {} is attempting to send exchange request to user ID: {}", senderEmail, requestDTO.getReceiverId());
 
@@ -101,6 +108,13 @@ public class ExchangeRequestService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public ExchangeRequestResponseDTO acceptRequest(Long requestId, String email) {
         log.info("User {} is attempting to accept request ID: {}", email, requestId);
 
@@ -132,6 +146,13 @@ public class ExchangeRequestService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public ExchangeRequestResponseDTO rejectRequest(Long requestId, String email) {
         log.info("User {} is attempting to reject request ID: {}", email, requestId);
 

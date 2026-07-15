@@ -35,6 +35,7 @@ public class MatchService {
     private final UserSkillRepository userSkillRepository;
 
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "matchResults", key = "#email + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<MatchResponseDTO> getMatchesForUser(String email, Pageable pageable) {
         log.info("Fetching matches for user: {} with pagination", email);
         return matchRepository.findByUser1EmailOrUser2Email(email, email, pageable)
@@ -56,6 +57,14 @@ public class MatchService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "matchResults", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public void refreshMatches() {
         log.info("Refreshing all user matches");
         // 1. Delete all existing matches

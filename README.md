@@ -588,6 +588,7 @@ graph TD
 * **Backend Build Failure**: Check the logs of the `Compile Backend & Run Tests` step to see if any tests failed or if compilation failed due to syntax errors.
 * **Frontend Build Failure**: Review logs under the `Compile & Build Frontend Assets` step. Ensure imports are correct and package installations have no conflicts.
 * **Docker Validation Failure**: Check the logs of the `Validate Backend/Frontend Dockerfile Build` steps to check for invalid configuration commands, missing source directories, or base image changes.
+* **CI Status Gate Failure**: This gate will only pass when all sub-jobs complete successfully.
 
 #### 3. Rerunning Workflows
 1. Inside the workflow run page on GitHub, click the **Re-run jobs** button in the top-right corner.
@@ -595,4 +596,46 @@ graph TD
    - **Re-run all jobs**: Runs the entire CI pipeline again.
    - **Re-run failed jobs**: Re-runs only the specific job that failed, keeping the success state of other completed jobs to save runner minutes.
 
+---
 
+## ⚡ Performance Optimization with Redis Caching (Stage 6)
+
+TalentTrade utilizes Redis to cache expensive database queries, aggregates, and user-specific stats.
+
+### Caching Architecture
+
+We implement a two-level read/write strategy:
+1. **Cache-Aside Pattern**: APIs first check Redis. If present (Cache Hit), they return the data immediately. Otherwise (Cache Miss), the database is queried, and the result is written back to Redis.
+2. **Write-Through/Eviction Pattern**: Whenever data is modified, the corresponding caches are updated or evicted to prevent stale data.
+3. **Graceful Connection Fallback**: If Redis becomes unavailable, a custom `CacheErrorHandler` intercepts the connection errors, logs them as warnings, and seamlessly falls back to the database, ensuring zero downtime.
+
+### Cache Key & TTL Configuration
+
+| Cache Name | Cached Content | TTL | Invalidation / Eviction Triggers |
+|---|---|---|---|
+| `dashboardStats` | User dashboard statistics | 10 Min | Session created/completed/cancelled, request changes, reviews, user updates |
+| `userProfiles` | User profile details | 30 Min | User profile updates, admin status/role changes |
+| `matchResults` | User matching page results | 30 Min | Match engine execution, user profile updates, skill mutations |
+| `platformAnalytics` | Admin dashboard analytical graphs | 1 Hour | User registration, skill created/deleted, matching, session completion, reviews |
+| `dashboardSummary` | Admin dashboard overview metrics | 1 Hour | User registration, skill created/deleted, matching, session completion, reviews |
+| `notificationCounts` | Unread user notification count | 5 Min | New notification created, marked as read, marked all as read, or deleted |
+
+### Running Redis Locally
+
+1. **Prerequisites**: Install Docker & Docker Compose.
+2. **Start the Caching Tier**:
+   ```bash
+   docker-compose up -d redis
+   ```
+3. **Verify Redis Connection**:
+   ```bash
+   docker exec -it talenttrade-redis redis-cli ping
+   # Expected Output: PONG
+   ```
+4. **Monitor Cache Hits/Misses**:
+   Watch application logs for custom markers:
+   * `[CACHE HIT]`
+   * `[CACHE MISS]`
+   * `[CACHE PUT]`
+   * `[CACHE EVICT]`
+   * `[REDIS ERROR]`

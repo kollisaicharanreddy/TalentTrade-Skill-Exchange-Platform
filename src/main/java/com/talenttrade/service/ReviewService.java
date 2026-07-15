@@ -28,6 +28,13 @@ public class ReviewService {
     private final NotificationService notificationService;
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public ReviewResponseDTO submitReview(String reviewerEmail, ReviewRequestDTO requestDTO) {
         log.info("User {} is submitting a review for session ID: {}", reviewerEmail, requestDTO.getSessionId());
 
@@ -112,6 +119,13 @@ public class ReviewService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public void deleteReview(Long id, String email) {
         log.info("User {} is attempting to delete review ID: {}", email, id);
 

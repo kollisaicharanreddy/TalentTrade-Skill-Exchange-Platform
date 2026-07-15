@@ -21,6 +21,7 @@ public class UserService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "userProfiles", key = "#email")
     public UserResponse getProfile(String email) {
         log.debug("Fetching profile for user: {}", email);
         User user = userRepository.findByEmail(email)
@@ -29,6 +30,14 @@ public class UserService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        put = {@org.springframework.cache.annotation.CachePut(value = "userProfiles", key = "#email")},
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", key = "#email"),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public UserResponse updateProfile(String email, UpdateProfileRequest request) {
         log.info("Attempting to update profile for user: {}", email);
         User user = userRepository.findByEmail(email)

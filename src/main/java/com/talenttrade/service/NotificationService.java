@@ -27,6 +27,7 @@ public class NotificationService {
     private final UserRepository userRepository;
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "notificationCounts", key = "#user.email")
     public void createNotification(User user, String title, String message, NotificationType type) {
         log.info("Creating notification of type {} for user ID: {}", type, user.getId());
         
@@ -50,7 +51,15 @@ public class NotificationService {
                 .map(this::mapToResponseDTO);
     }
 
+    @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "notificationCounts", key = "#email")
+    public long getUnreadCount(String email) {
+        log.info("Fetching unread notification count for user: {}", email);
+        return notificationRepository.countByUserEmailAndIsReadFalse(email);
+    }
+
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "notificationCounts", key = "#email")
     public void markAsRead(Long id, String email) {
         log.info("Marking notification ID: {} as read by user: {}", id, email);
         
@@ -67,6 +76,7 @@ public class NotificationService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "notificationCounts", key = "#email")
     public void markAllAsRead(String email) {
         log.info("Marking all notifications as read for user: {}", email);
         
@@ -77,6 +87,7 @@ public class NotificationService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.CacheEvict(value = "notificationCounts", key = "#email")
     public void deleteNotification(Long id, String email) {
         log.info("Deleting notification ID: {} by user: {}", id, email);
 

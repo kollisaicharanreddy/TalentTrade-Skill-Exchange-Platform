@@ -38,6 +38,13 @@ public class SessionService {
     private final CalendarService calendarService;
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public SessionResponseDTO createSession(String schedulerEmail, SessionRequestDTO requestDTO) {
         log.info("User {} is scheduling a session for exchange request ID: {}", schedulerEmail, requestDTO.getExchangeRequestId());
 
@@ -134,6 +141,13 @@ public class SessionService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public SessionResponseDTO updateSession(Long id, String email, SessionRequestDTO requestDTO) {
         log.info("User {} is attempting to update session ID: {}", email, id);
 
@@ -194,6 +208,13 @@ public class SessionService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public SessionResponseDTO completeSession(Long id, String email) {
         log.info("Marking session ID: {} as COMPLETED by user: {}", id, email);
 
@@ -216,6 +237,13 @@ public class SessionService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public SessionResponseDTO cancelSession(Long id, String email) {
         log.info("Cancelling session ID: {} by user: {}", id, email);
 
@@ -256,6 +284,13 @@ public class SessionService {
     }
 
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public void deleteSession(Long id, String email) {
         log.info("Deleting session ID: {} by user: {}", id, email);
 

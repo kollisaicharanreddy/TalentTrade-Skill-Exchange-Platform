@@ -31,9 +31,10 @@ public class AdminService {
     private final DataSource dataSource;
 
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "dashboardSummary", key = "'summary'")
     public Map<String, Object> getDashboardSummary() {
         Map<String, Object> summary = new HashMap<>();
-
+        
         // User stats
         summary.put("totalUsers", userRepository.count());
         summary.put("activeUsers", userRepository.countByEnabled(true));
@@ -42,7 +43,7 @@ public class AdminService {
         summary.put("localUsers", userRepository.countByProvider(AuthProvider.LOCAL));
         summary.put("admins", userRepository.countByRole(Role.ADMIN));
         summary.put("normalUsers", userRepository.countByRole(Role.USER));
-
+ 
         // Skill, matches & requests stats
         summary.put("skills", skillRepository.count());
         summary.put("matches", matchRepository.count());
@@ -52,27 +53,28 @@ public class AdminService {
         summary.put("pendingRequests", exchangeRequestRepository.findAll().stream().filter(r -> r.getStatus() == RequestStatus.PENDING).count());
         summary.put("acceptedRequests", exchangeRequestRepository.findAll().stream().filter(r -> r.getStatus() == RequestStatus.ACCEPTED).count());
         summary.put("rejectedRequests", exchangeRequestRepository.findAll().stream().filter(r -> r.getStatus() == RequestStatus.REJECTED).count());
-
+ 
         // Session stats
         long totalSessions = sessionRepository.count();
         summary.put("sessions", totalSessions);
         summary.put("upcomingSessions", sessionRepository.findAll().stream().filter(s -> s.getStatus() == SessionStatus.SCHEDULED).count());
         summary.put("completedSessions", sessionRepository.findAll().stream().filter(s -> s.getStatus() == SessionStatus.COMPLETED).count());
         summary.put("cancelledSessions", sessionRepository.findAll().stream().filter(s -> s.getStatus() == SessionStatus.CANCELLED).count());
-
+ 
         // Review stats
         List<Review> reviews = reviewRepository.findAll();
         double avgRating = reviews.stream().mapToDouble(Review::getRating).average().orElse(0.0);
         summary.put("reviews", reviews.size());
         summary.put("averagePlatformRating", Math.round(avgRating * 100.0) / 100.0);
-
+ 
         // Notifications
         summary.put("unreadNotifications", notificationRepository.findAll().stream().filter(n -> !n.isRead()).count());
-
+ 
         return summary;
     }
-
+ 
     @Transactional(readOnly = true)
+    @org.springframework.cache.annotation.Cacheable(value = "platformAnalytics", key = "'analytics'")
     public Map<String, Object> getPlatformAnalytics() {
         Map<String, Object> analytics = new HashMap<>();
 
@@ -195,6 +197,14 @@ public class AdminService {
 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "userProfiles", key = "#result.email"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", key = "#result.email"),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public User setUserStatus(Long userId, boolean enabled) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -207,9 +217,17 @@ public class AdminService {
                 LocalDateTime.now(), adminEmail, user.getEmail(), enabled ? "ACTIVATED" : "DEACTIVATED");
         return userRepository.save(user);
     }
-
+ 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "userProfiles", key = "#result.email"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", key = "#result.email"),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public User setUserRole(Long userId, String roleStr) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -224,9 +242,18 @@ public class AdminService {
                 LocalDateTime.now(), adminEmail, user.getEmail(), oldRole, role);
         return userRepository.save(user);
     }
-
+ 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "userProfiles", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardStats", allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "matchResults", allEntries = true)
+        }
+    )
     public void deleteUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -246,6 +273,12 @@ public class AdminService {
 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public Skill addSkill(Skill skill) {
         if (skillRepository.existsByNameIgnoreCase(skill.getName())) {
             throw new IllegalArgumentException("Skill name already exists");
@@ -253,9 +286,15 @@ public class AdminService {
         log.info("Admin created new skill: {}", skill.getName());
         return skillRepository.save(skill);
     }
-
+ 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
+    @org.springframework.cache.annotation.Caching(
+        evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = "platformAnalytics", key = "'analytics'"),
+            @org.springframework.cache.annotation.CacheEvict(value = "dashboardSummary", key = "'summary'")
+        }
+    )
     public void deleteSkill(Long skillId) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new IllegalArgumentException("Skill not found"));

@@ -44,6 +44,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/talenttrade
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      # Redis Connection Configuration
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       # Profile and security configurations
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
@@ -60,6 +63,28 @@ services:
       db:
         # Wait until the PostgreSQL database container health check passes
         condition: service_healthy
+      redis:
+        # Wait until the Redis container health check passes
+        condition: service_healthy
+    networks:
+      - talenttrade-network
+
+  # ==========================================
+  # Redis Cache Service
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: talenttrade-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - talenttrade-network
 
@@ -94,4 +119,6 @@ networks:
 volumes:
   # Named volume for database persistence
   postgres_data:
+    driver: local
+  redis_data:
     driver: local

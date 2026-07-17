@@ -41,7 +41,7 @@ COPY --from=build --chown=spring:spring /app/target/*.jar app.jar
 USER spring
 
 # Expose the application port
-EXPOSE 8080
+EXPOSE 8081
 
 # Run the application with optimized JVM arguments
 # -XX:+UseG1GC: Enables G1 Garbage Collector (good for general microservices)

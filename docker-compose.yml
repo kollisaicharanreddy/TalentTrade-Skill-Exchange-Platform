@@ -38,7 +38,7 @@ services:
     container_name: talenttrade-app
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
       # Connect to PostgreSQL container using service name 'db' as hostname
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/talenttrade
